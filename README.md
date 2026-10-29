@@ -18,13 +18,16 @@
 </p>
 
 <p align="center">
-  <a href="README_RU.md"><b>🇷🇺 Читать документацию на русском языке</b></a> | 
+  *( 🇬🇧 <a href="#english"><b>English</b></a> | 🇷🇺 <a href="#русский"><b>Русский</b></a> )* &nbsp;•&nbsp; 
   <a href="https://github.com/SaidAuita/AI-Clipboard-Paste/releases/latest"><b>📦 Download Latest Release (v1.0.12)</b></a>
 </p>
 
 ---
 
-## ⚡ The Core Problem: Illustrator Clipboard Failure
+<a id="english"></a>
+## 🇬🇧 English
+
+### ⚡ The Core Problem: Illustrator Clipboard Failure
 
 During long, intensive design and prepress sessions in Adobe Illustrator (especially on Windows 10/11), users frequently experience a catastrophic vector clipboard breakdown:
 
@@ -35,7 +38,7 @@ During long, intensive design and prepress sessions in Adobe Illustrator (especi
 
 ---
 
-## 🔬 Diagnostic Audit & Proof: How the Cause Was Discovered
+### 🔬 Diagnostic Audit & Proof: How the Cause Was Discovered
 
 To diagnose this issue systematically, a low-level diagnostic monitor — **[AI-ClipboardDoctor](tools/AI-ClipboardDoctor/)** — was developed using the Windows API to audit clipboard events in real time.
 
@@ -60,7 +63,7 @@ To diagnose this issue systematically, a low-level diagnostic monitor — **[AI-
 ================================================================================
 ```
 
-### Key Technical Findings:
+#### Key Technical Findings:
 * **GDI/User Handles are Healthy:** GDI count was 2,292 and User count was 4,545 (far below the 10,000 Windows limit). The failure is not caused by OS handle exhaustion.
 * **No Third-Party Locking:** The clipboard was not locked or held by external apps (browsers, messengers, or clipboard managers). The clipboard owner was strictly `Illustrator.exe`.
 * **Root Cause Located:** Upon pressing `Ctrl+C`, Illustrator calls Windows `OpenClipboard()` and `EmptyClipboard()`, advancing the OS sequence counter (`#5545 ➔ #5546`). However, during internal serialization of vector geometry into standard clipboard streams (`AICB`, `Adobe Illustrator Private Format`, `PDF`), an unhandled exception occurs inside Illustrator's internal serialization engine. Illustrator prematurely invokes `CloseClipboard()`, leaving the system clipboard **completely empty (0 formats, 0.0 KB)**.
@@ -71,7 +74,7 @@ To diagnose this issue systematically, a low-level diagnostic monitor — **[AI-
 
 ---
 
-## 💡 The Solution: AI-Clipboard-Paste
+### 💡 The Solution: AI-Clipboard-Paste
 
 **AI-Clipboard-Paste** provides a permanent fix by **completely bypassing the Windows OLE clipboard and Illustrator's fragile internal serializer**:
 
@@ -83,23 +86,23 @@ To diagnose this issue systematically, a low-level diagnostic monitor — **[AI-
 
 ---
 
-## 📸 Interface & Workflows
+### 📸 Interface & Workflows
 
-### 1. Two-Step Independent Buffer (Tab: «2-Step Buffer»)
+#### 1. Two-Step Independent Buffer (Tab: «2-Step Buffer»)
 Classic clipboard workflow: copy artwork in Document A ➔ switch to any other document or layer ➔ paste in place or centered.
 
 <p align="center">
   <img src="images/Clipboard Paste_01.png" alt="2-Step Buffer Tab" width="380">
 </p>
 
-### 2. One-Click Direct Transfer (Tab: «1-Click Direct»)
+#### 2. One-Click Direct Transfer (Tab: «1-Click Direct»)
 Instant transfer without intermediate steps: directly move or copy selection to a chosen layer, create a new layer above, or send to another open document.
 
 <p align="center">
   <img src="images/Clipboard Paste_00.png" alt="1-Click Direct Tab" width="380">
 </p>
 
-### 3. Standalone Micro-Panels for Global Hotkeys (F5, F6, F7)
+#### 3. Standalone Micro-Panels for Global Hotkeys (F5, F6, F7)
 Three lightweight companion micro-panels featuring high-visibility action buttons and live status indicators. They can be docked in a narrow toolbar or triggered globally:
 
 | `CP_copy` (F5) | `CP_place` (F6) | `CP_paste` (F7) |
@@ -109,7 +112,7 @@ Three lightweight companion micro-panels featuring high-visibility action button
 
 ---
 
-## ⌨️ Configuring Global Hotkeys (F5 / F6 / F7)
+### ⌨️ Configuring Global Hotkeys (F5 / F6 / F7)
 
 Adobe CEP panels cannot capture global keystrokes when the panel is out of focus. This limitation is solved by registering three native Illustrator menu commands:
 * `CP_copy`
@@ -118,7 +121,7 @@ Adobe CEP panels cannot capture global keystrokes when the panel is out of focus
 
 By pairing these commands with Illustrator **Actions**, you get true single-key global shortcuts that work from anywhere in your document!
 
-### Method 1: Load Pre-Built Actions (Fast & Recommended)
+#### Method 1: Load Pre-Built Actions (Fast & Recommended)
 1. In Adobe Illustrator, open the Actions panel: `Window` ➔ `Actions`.
 2. In the panel flyout menu, choose **«Load Actions...»**.
 3. Select the included action set file:  
@@ -134,7 +137,7 @@ By pairing these commands with Illustrator **Actions**, you get true single-key 
 
 ---
 
-### Method 2: Manual Hotkey Setup (Any Custom Key)
+#### Method 2: Manual Hotkey Setup (Any Custom Key)
 
 If `F5`–`F7` are already used by other workflows, custom keys (e.g. `F2`, `F3`, `Shift+F5`) can be assigned manually:
 
@@ -156,7 +159,7 @@ If `F5`–`F7` are already used by other workflows, custom keys (e.g. `F2`, `F3`
 
 ---
 
-## 🩺 Diagnostic Sentinel Tool Included
+### 🩺 Diagnostic Sentinel Tool Included
 
 The repository includes the diagnostic monitor used to analyze the clipboard failure:
 * **Directory:** [`tools/AI-ClipboardDoctor/`](tools/AI-ClipboardDoctor/)
@@ -165,7 +168,7 @@ The repository includes the diagnostic monitor used to analyze the clipboard fai
 
 ---
 
-## 🌍 Multilingual Support (8 Languages)
+### 🌍 Multilingual Support (8 Languages)
 
 The extension includes complete, built-in translations for:
 * 🇬🇧 English • 🇷🇺 Русский • 🇩🇪 Deutsch • 🇪🇸 Español • 🇫🇷 Français • 🇵🇹 Português • 🇨🇳 中文 • 🇯🇵 日本語
@@ -174,9 +177,9 @@ Switching the language in the main panel instantly and synchronously updates all
 
 ---
 
-## 📦 Installation
+### 📦 Installation
 
-### Automatic Installation (Windows — Recommended)
+#### Automatic Installation (Windows — Recommended)
 1. Download the latest release: [`Clipboard_Paste_v1.0.12.zip`](https://github.com/SaidAuita/AI-Clipboard-Paste/releases/latest).
 2. Close Adobe Illustrator.
 3. Run `Install.bat` with a double-click.
@@ -186,7 +189,7 @@ Switching the language in the main panel instantly and synchronously updates all
 4. Launch Illustrator and navigate to:  
    `Window` ➔ `Extensions` ➔ **`Clipboard Paste`** (or micro-panels `CP_copy`, `CP_place`, `CP_paste`).
 
-### Manual Installation (Windows & macOS)
+#### Manual Installation (Windows & macOS)
 1. Copy the extension folder into the Adobe CEP extensions directory:
    * **Windows:** `%APPDATA%\Adobe\CEP\extensions\Clipboard Paste\`
    * **macOS:** `~/Library/Application Support/Adobe/CEP/extensions/Clipboard Paste/`
@@ -201,30 +204,265 @@ Switching the language in the main panel instantly and synchronously updates all
      ```
 3. Restart Illustrator.
 
-### Uninstallation
+#### Uninstallation
 Run `Uninstall.bat` to cleanly remove the extension from Adobe CEP without affecting user actions or Illustrator preferences.
 
 ---
 
-## 🛠️ Architecture & Developer Notes
+### 🛠️ Other Projects
 
-* **Shared ExtendScript Engine:** All panels connect through `#targetengine "CP_SHARED"`. Data copied in `CP_copy` is instantly visible to `CP_place`, `CP_paste`, and the main panel without inter-process lag.
-* **Triple-Redundant Session Buffer:**  
-  1. `$.global.ClipboardPasteHost`
-  2. Backup in `app.__CP_BUFFER__`
-  3. Structured geometry descriptors (coordinates, artboard bounds, layer hierarchy).
-* **Hot Reload:** Click the version badge (`v1.0.12`) in the main panel header or right-click any micro-panel to reload UI and script assets on the fly.
+**[AI Dimension](https://github.com/SaidAuita/AI-Dimension)**
+* Automatic dimensioning, gap measuring, and technical callout generator for Adobe Illustrator.
+
+**[ID Dimension](https://github.com/SaidAuita/ID-Dimension)**
+* Technical dimensioning and drafting annotation tool for Adobe InDesign (includes both CEP panel and ScriptUI palette).
+
+**[ComfyUI Photoshop Plugin (PH-CU-S)](https://github.com/SaidAuita/ComfyUI_PH-CU-S)**
+* A powerful Photoshop plugin powered by ComfyUI, providing direct integration with local generative models without any clouds, subscriptions, or recurring fees.
+
+### 💎 QR Code with Custom Shape Logo
+
+<table>
+  <tr>
+    <td align="center" width="50%">
+      <a href="https://ph-cu-s.com/ai-code-pro">
+        <img src="images/ai_code_pro.png" width="130" alt="AI Code PRO - Custom Shape Logo QR Code" /><br/>
+        <b>AI Code PRO</b>
+      </a><br/>
+      <sub>Vector Barcodes (18 Standards) & Designer QR Codes for <b>Adobe Illustrator</b></sub><br/><br/>
+      <a href="https://ph-cu-s.com/ai-code-pro"><img src="https://img.shields.io/badge/PRO-Illustrator%20Extension-orange.svg" alt="AI Code PRO" /></a>
+    </td>
+    <td align="center" width="50%">
+      <a href="https://ph-cu-s.com/id-code-pro">
+        <img src="images/id_code_pro.png" width="130" alt="ID Code PRO - Custom Shape Logo QR Code" /><br/>
+        <b>ID Code PRO</b>
+      </a><br/>
+      <sub>Vector Barcodes (18 Standards) & Designer QR Codes for <b>Adobe InDesign</b></sub><br/><br/>
+      <a href="https://ph-cu-s.com/id-code-pro"><img src="https://img.shields.io/badge/PRO-InDesign%20Extension-purple.svg" alt="ID Code PRO" /></a>
+    </td>
+  </tr>
+</table>
 
 ---
 
-## 🛠️ Other Projects
+<a id="русский"></a>
+## 🇷🇺 Русский
 
-* **[AI Code Pro](https://github.com/SaidAuita/AI-Code-Pro)** — Professional Barcode & QR Code generator for Adobe Illustrator with live verification and batch layout.
-* **[ID Code Pro](https://github.com/SaidAuita/ID-Code-Pro)** — Barcode & QR Code generator extension and automation script for Adobe InDesign.
-* **[AI Dimension](https://github.com/SaidAuita/AI-Dimension)** — Automatic dimensioning, gap measuring, and technical callout generator for Adobe Illustrator.
-* **[ID Dimension](https://github.com/SaidAuita/ID-Dimension)** — Technical dimensioning and drafting annotation tool for Adobe InDesign.
-* **[PH-CU-S](https://github.com/SaidAuita/ComfyUI_PH-CU-S)** — Local generative AI Photoshop plugin powered by ComfyUI (no subscriptions, 100% offline).
-* **[ph-cu-s.com/tools](https://ph-cu-s.com/tools)** — Complete collection of prepress automation scripts and plugins.
+### ⚡ Проблема: отвал буфера обмена в Illustrator при активной работе
+
+При продолжительной и активной работе в Adobe Illustrator (особенно на Windows 10/11) пользователи регулярно сталкиваются с отказом буфера обмена:
+
+1. **Тихий сбой:** Выделяется векторный объект, нажимается `Ctrl+C` (или *Редактирование ➔ Скопировать*). Никаких предупреждений или ошибок не появляется.
+2. **Вставка не работает:** При нажатии `Ctrl+V` (или *Вставить на то же место*) ничего не происходит, либо вставляется старое содержимое, скопированное задолго до этого.
+3. **Сбой сохраняется в новых макетах:** Нажатие `Ctrl+C` даже на обычном прямоугольнике в чистом новом документе (`Ctrl+N`) не работает.
+4. **Потеря рабочего времени:** Единственным решением оставался принудительный перезапуск `Illustrator.exe` со сбросом истории отмен.
+
+---
+
+### 🔬 Диагностический аудит: как была выявлена причина сбоя
+
+Для точной локализации проблемы была разработана низкоуровневая диагностическая утилита — **[AI-ClipboardDoctor](tools/AI-ClipboardDoctor/)**, отслеживающая системные события Windows API в реальном времени.
+
+```text
+================================================================================
+  СОБЫТИЕ #5 — [CTRL+C] — INFO
+  Время: 23:44:53.731 | Процесс: Illustrator (PID: 57224)
+  GDI Handles: 2 292 | User Handles: 4 545
+  Состояние: Ожидание публикации данных Windows Clipboard (Ревизия: #5545).
+================================================================================
+
+================================================================================
+  СОБЫТИЕ #6 — [WARN: NO VECTORS] — WARNING
+  Время: 23:44:53.802 | Задержка: 71 мс
+  Сводка: ВНИМАНИЕ: Векторные форматы отсутствуют в буфере обмена!
+  Владелец буфера: Illustrator (PID: 57224)
+  Заблокирован:    НЕТ (Буфер свободен)
+  Ревизия буфера:  Sequence #5546
+  Всего форматов:  0
+  Общий объём:     0.0 КБ
+  Форматы:         [ПУСТО — 0 форматов]
+================================================================================
+```
+
+#### Технические выводы аудита:
+* **Дескрипторы GDI и User в норме:** 2 292 GDI и 4 545 User дескрипторов (значительно ниже лимита Windows в 10 000). Утечки дескрипторов ОС нет.
+* **Блокировок буфера сторонними программами нет:** Буфер обмена не захвачен внешними приложениями (браузерами, мессенджерами или менеджерами буфера). Владельцем является исключительно `Illustrator.exe`.
+* **Локализация сбоя:** При нажатии `Ctrl+C` Illustrator вызывает API-функции `OpenClipboard()` и `EmptyClipboard()`, инкрементируя системный счётчик буфера (`#5545 ➔ #5546`). Однако во время внутренней сериализации геометрии в стандартные векторные форматы обмена (`AICB`, `Adobe Illustrator Private Format`, `PDF`) внутри собственного сериализатора Illustrator происходит критический сбой. Illustrator аварийно вызывает `CloseClipboard()`, оставляя системный буфер **абсолютно пустым (0 форматов, 0.0 КБ)**.
+* **Подсистема вставки (Paste Engine) исправна:** При инъекции тестового векторного потока `AICB` напрямую в буфер через `AI-ClipboardDoctor`, нажатие `Ctrl+V` в Illustrator мгновенно и безошибочно вставляет тестовый вектор.
+* **Вывод:** Проблема изолирована строго во **внутреннем модуле сериализации копирования Illustrator** (процессный синглтон), который после сбоя не может восстановиться без перезапуска процесса.
+
+*(Полный текст технического отчёта доступен в файле [`tools/AI-ClipboardDoctor/illustrator_clipboard_failure_analysis.md`](tools/AI-ClipboardDoctor/illustrator_clipboard_failure_analysis.md)).*
+
+---
+
+### 💡 Решение проблемы: AI-Clipboard-Paste
+
+**AI-Clipboard-Paste** полностью исключает обращение к системному буферу обмена Windows и падающему внутреннему сериализатору Illustrator:
+
+* ⚡ **Прямое дублирование в оперативной памяти:** Все операции выполняются напрямую в адресном пространстве процесса Illustrator через движок ExtendScript DOM (`CP_SHARED`).
+* 🎯 **100% Векторная точность:** Полное сохранение плашечных и триадных цветов (CMYK/Spot), оверпринтов, режимов наложения, сложных составных контуров и обтравочных масок.
+* 📍 **Идеальное позиционирование (In Place):** Объекты вставляются точно в свои исходные координаты `[x, y]` артборда либо центрируются на видимой области.
+* 🚀 **В 5–10 раз быстрее:** Отсутствуют задержки на конвертацию тяжёлых векторов через ОС.
+* 🛡️ **Полная изоляция:** Буфер сессии защищён от любых внешних приложений и не сбрасывается при работе с текстом в браузере или мессенджере.
+
+---
+
+### 📸 Скриншоты и режимы работы
+
+#### 1. Двухшаговый независимый буфер (Вкладка «2-Step Buffer»)
+Классический сценарий: скопировать объект в одном документе ➔ переключиться в любой другой документ или слой ➔ вставить на то же место или по центру.
+
+<p align="center">
+  <img src="images/Clipboard Paste_01.png" alt="Вкладка 2-Step Buffer" width="380">
+</p>
+
+#### 2. Однокликовый прямой перенос (Вкладка «1-Click Direct»)
+Мгновенное перемещение выделенных объектов без промежуточных шагов: напрямую на выбранный слой, на созданный новый слой выше (`+ New Layer`) или в другой открытый документ.
+
+<p align="center">
+  <img src="images/Clipboard Paste_00.png" alt="Вкладка 1-Click Direct" width="380">
+</p>
+
+#### 3. Автономные микро-панели под горячие клавиши (F5, F6, F7)
+Три компактные панели с крупными кнопками и индикатором статуса, которые можно закрепить в узкую док-панель или привязать к глобальным клавишам:
+
+| `CP_copy` (F5) | `CP_place` (F6) | `CP_paste` (F7) |
+|:---:|:---:|:---:|
+| <img src="images/Clipboard Paste_02.png" width="280" alt="CP_copy F5"> | <img src="images/Clipboard Paste_03.png" width="280" alt="CP_place F6"> | <img src="images/Clipboard Paste_04.png" width="280" alt="CP_paste F7"> |
+| **Копировать в буфер** | **Вставить на то же место** | **Вставить по центру** |
+
+---
+
+### ⌨️ Настройка глобальных горячих клавиш (F5 / F6 / F7)
+
+Сторонние расширения Adobe CEP не могут перехватывать системные нажатия клавиш без активного фокуса на панели. Проблема решена регистрацией трёх команд меню Illustrator:
+* `CP_copy`
+* `CP_place`
+* `CP_paste`
+
+Связав их с операциями (Actions), пользователь получает **настоящие глобальные горячие клавиши**, работающие из любого места макета!
+
+#### Способ 1: Загрузка готового набора операций (Рекомендуется)
+1. В Illustrator откройте палитру операций: `Окно` ➔ `Операции` (`Window` ➔ `Actions`).
+2. В меню палитры выберите пункт **«Загрузить операции...»** (**Load Actions...**).
+3. Выберите файл из каталога плагина:  
+   [`actions/ClipboardPaste_Shortcuts.aia`](actions/ClipboardPaste_Shortcuts.aia)
+4. В палитре появится готовая папка **Clipboard Paste** с назначенными клавишами:
+   * **F5** ➔ `Buffer_Copy`
+   * **F6** ➔ `Buffer_Paste_InPlace`
+   * **F7** ➔ `Buffer_Paste_Center`
+
+<p align="center">
+  <img src="images/Clipboard Paste_05.png" alt="Палитра Actions с назначенными хоткеями F5, F6, F7" width="520">
+</p>
+
+---
+
+#### Способ 2: Ручная настройка на любые сочетания клавиш
+
+Если клавиши `F5`–`F7` уже заняты другими процессами, можно назначить любые другие клавиши (например, `F2`, `F3`, `Shift+F5`):
+
+1. В меню палитры **Actions** нажмите **«Новая операция»** (**New Action**).
+2. Задайте имя операции и выберите желаемую функциональную клавишу.
+3. В правом меню палитры Actions выберите пункт **«Вставить пункт меню...»** (**Insert Menu Item...**):
+
+<p align="center">
+  <img src="images/Clipboard Paste_06.png" alt="Выбор Insert Menu Item в палитре Actions" width="480">
+</p>
+
+4. В открывшемся диалоге введите точное имя команды (например, `CP_copy`, `CP_place` или `CP_paste`) и нажмите **Find** ➔ **OK**:
+
+<p align="center">
+  <img src="images/Clipboard Paste_07.png" alt="Диалог Insert Menu Item с командой CP_copy" width="440">
+</p>
+
+5. Остановите запись операции. Теперь операция будет мгновенно срабатывать по нажатию назначенной клавиши.
+
+---
+
+### 🩺 Диагностическая утилита в комплекте
+
+В репозиторий включена диагностическая программа, использованная при аудите сбоя:
+* **Каталог:** [`tools/AI-ClipboardDoctor/`](tools/AI-ClipboardDoctor/)
+* **Исполняемый файл:** Готовая Windows-утилита [`tools/AI-ClipboardDoctor/build/AI-ClipboardDoctor-Lite.exe`](tools/AI-ClipboardDoctor/build/AI-ClipboardDoctor-Lite.exe)
+* **Возможности:** Мониторинг форматов буфера в реальном времени, фиксация сбоев Illustrator, сброс зависших блокировок (`Unlock Clipboard`) и тест инъекции векторов.
+
+---
+
+### 🌍 Мультиязычность (8 языков)
+
+Расширение содержит встроенную локализацию на 8 языков:
+* 🇷🇺 Русский • 🇬🇧 English • 🇩🇪 Deutsch • 🇪🇸 Español • 🇫🇷 Français • 🇵🇹 Português • 🇨🇳 中文 • 🇯🇵 日本語
+
+При выборе языка в главной панели все открытые микро-панели (`CP_copy`, `CP_place`, `CP_paste`) **мгновенно и синхронно обновляют перевод** в реальном времени.
+
+---
+
+### 📦 Установка
+
+#### Автоматическая установка (Windows — Рекомендуется)
+1. Скачайте свежий релиз: [`Clipboard_Paste_v1.0.12.zip`](https://github.com/SaidAuita/AI-Clipboard-Paste/releases/latest).
+2. Закройте Adobe Illustrator.
+3. Запустите файл `Install.bat` двойным кликом.
+   * Скрипт пропишет режим отладки Adobe CEP (`PlayerDebugMode`) в системном реестре Windows;
+   * Очистит устаревший кэш CEP;
+   * Безопасно скопирует расширение в `%APPDATA%\Adobe\CEP\extensions\Clipboard Paste\`.
+4. Запустите Illustrator и откройте панель:  
+   `Окно` ➔ `Расширения` ➔ **`Clipboard Paste`** (или микро-панели `CP_copy`, `CP_place`, `CP_paste`).
+
+#### Ручная установка (macOS & Windows)
+1. Скопируйте папку расширения в системный каталог CEP:
+   * **Windows:** `%APPDATA%\Adobe\CEP\extensions\Clipboard Paste\`
+   * **macOS:** `~/Library/Application Support/Adobe/CEP/extensions/Clipboard Paste/`
+2. Включите режим отладки `PlayerDebugMode`:
+   * **Windows:** запустите `enable_player_debug_mode.reg`.
+   * **macOS:** выполните в Терминале:
+     ```bash
+     defaults write com.adobe.CSXS.11 PlayerDebugMode 1
+     defaults write com.adobe.CSXS.12 PlayerDebugMode 1
+     defaults write com.adobe.CSXS.13 PlayerDebugMode 1
+     defaults write com.adobe.CSXS.14 PlayerDebugMode 1
+     ```
+3. Перезапустите Illustrator.
+
+#### Удаление
+Для полного удаления запустите `Uninstall.bat`. Настройки и экшены Illustrator не будут затронуты.
+
+---
+
+### 🛠️ Другие проекты (My Projects)
+
+**[AI Dimension](https://github.com/SaidAuita/AI-Dimension)**
+* Автоматическая простановка технических размеров, зазоров и выносных линий для Adobe Illustrator.
+
+**[ID Dimension](https://github.com/SaidAuita/ID-Dimension)**
+* Инструмент простановки чертежных размеров и аннотаций для Adobe InDesign (включает панель CEP и скрипт ScriptUI).
+
+**[ComfyUI Photoshop Plugin (PH-CU-S)](https://github.com/SaidAuita/ComfyUI_PH-CU-S)**
+* Мощный плагин для Photoshop на базе ComfyUI, обеспечивающий прямую интеграцию с локальными генеративными моделями без подписок и облаков.
+
+### 💎 QR код с логотипом произвольной формы
+
+<table>
+  <tr>
+    <td align="center" width="50%">
+      <a href="https://ph-cu-s.com/ru/ai-code-pro">
+        <img src="images/ai_code_pro_ru.png" width="130" alt="AI Code PRO - QR код с логотипом произвольной формы" /><br/>
+        <b>AI Code PRO</b>
+      </a><br/>
+      <sub>Генератор векторных штрихкодов (18 стандартов) и дизайнерских QR-кодов для <b>Adobe Illustrator</b></sub><br/><br/>
+      <a href="https://ph-cu-s.com/ru/ai-code-pro"><img src="https://img.shields.io/badge/PRO-Расширение%20Illustrator-orange.svg" alt="AI Code PRO" /></a>
+    </td>
+    <td align="center" width="50%">
+      <a href="https://ph-cu-s.com/ru/id-code-pro">
+        <img src="images/id_code_pro_ru.png" width="130" alt="ID Code PRO - QR код с логотипом произвольной формы" /><br/>
+        <b>ID Code PRO</b>
+      </a><br/>
+      <sub>Генератор векторных штрихкодов (18 стандартов) и дизайнерских QR-кодов для <b>Adobe InDesign</b></sub><br/><br/>
+      <a href="https://ph-cu-s.com/ru/id-code-pro"><img src="https://img.shields.io/badge/PRO-Расширение%20InDesign-purple.svg" alt="ID Code PRO" /></a>
+    </td>
+  </tr>
+</table>
 
 ---
 
@@ -232,4 +470,5 @@ Run `Uninstall.bat` to cleanly remove the extension from Adobe CEP without affec
 
 * **Author:** Said Auita ([GitHub: @SaidAuita](https://github.com/SaidAuita))
 * **Project Repository:** [github.com/SaidAuita/AI-Clipboard-Paste](https://github.com/SaidAuita/AI-Clipboard-Paste)
+* **Prepress Automation Hub:** [ph-cu-s.com/tools](https://ph-cu-s.com/tools)
 * **License:** Distributed under the [MIT License](LICENSE).

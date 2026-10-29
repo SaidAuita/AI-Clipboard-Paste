@@ -32,7 +32,13 @@
   - При смене языка в главной панели все микро-панели моментально обновляют перевод кнопок, подсказок и статусов.
 - [x] **Документация и GitHub**:
   - Папка-дубль с опечаткой `Clipboard Pate` удалена, проект очищен.
-  - Подготовлен подробный, структурированный [README.md](file:///c:/_CODE/illustrator/Clipboard%20Paste/README.md) на русском языке со скриншотами интерфейса, инструкцией по настройке экшенов F5/F6/F7 через палитру Actions и архитектурным описанием.
+  - Подготовлен подробный [README.md](file:///c:/_CODE/illustrator/Clipboard%20Paste/README.md) на английском языке и [README_RU.md](file:///c:/_CODE/illustrator/Clipboard%20Paste/README_RU.md) на русском языке.
+  - В документацию включены результаты аппаратного аудита Windows API (`AI-ClipboardDoctor Sentinel`), доказавшие изолированность сбоя во внутреннем OLE-сериализаторе Illustrator.
+  - В репозиторий включена утилита диагностики [`tools/AI-ClipboardDoctor/`](file:///c:/_CODE/illustrator/Clipboard%20Paste/tools/AI-ClipboardDoctor/).
+  - В подвал добавлен стандартный блок «Другие проекты» (AI Code Pro, ID Code Pro, AI Dimension, ID Dimension, PH-CU-S).
   - Создан файл [LICENSE](file:///c:/_CODE/illustrator/Clipboard%20Paste/LICENSE) (MIT).
-  - Готово к проверке пользователем перед финальным переводом на английский язык.
+  - Репозиторий опубликован на GitHub: [github.com/SaidAuita/AI-Clipboard-Paste](https://github.com/SaidAuita/AI-Clipboard-Paste).
+  - Опубликован официальный релиз [v1.0.12](https://github.com/SaidAuita/AI-Clipboard-Paste/releases/tag/v1.0.12) с готовыми к установке архивами:
+    - `Clipboard_Paste_v1.0.12.zip` (автоинсталлятор расширения)
+    - `AI-ClipboardDoctor-Lite.exe` (диагностический сентинел)
 

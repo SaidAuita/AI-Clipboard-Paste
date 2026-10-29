@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clipboard Paste v1.0.12</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script src="js/libs/CSInterface.js"></script>
+    <script>
+        var csInterface = (typeof CSInterface !== 'undefined') ? new CSInterface() : null;
+        function reloadExtensionPanel() {
+            try {
+                if (csInterface && typeof SystemPath !== 'undefined') {
+                    var extRoot = csInterface.getSystemPath(SystemPath.EXTENSION);
+                    if (extRoot) {
+                        var jsxFile = (extRoot + '/jsx/hostscript.jsx').replace(/\\/g, '/');
+                        csInterface.evalScript('#targetengine "CP_SHARED"\ntry { $.evalFile(new File("' + jsxFile + '")); "OK"; } catch(e) { e.message; }');
+                    }
+                }
+            } catch (eJsx) {}
+            setTimeout(function() {
+                try {
+                    var loc = window.location;
+                    var cleanPath = (loc.pathname || loc.href).split('?')[0];
+                    loc.href = cleanPath + '?_r=' + Date.now();
+                } catch (e) {
+                    window.location.reload(true);
+                }
+            }, 80);
+        }
+    </script>
+</head>
+<body>
+    <header class="header">
+        <div class="header-left">
+            <img src="icons/iconNormal.png" class="header-logo" alt="CP" width="22" height="22" title="Clipboard Paste">
+            <select id="lang_select" class="lang-select" title="Выберите язык интерфейса / Select language">
+                <option value="ru">🇷🇺 Русский</option>
+                <option value="en">🇬🇧 English</option>
+                <option value="de">🇩🇪 Deutsch</option>
+                <option value="es">🇪🇸 Español</option>
+                <option value="fr">🇫🇷 Français</option>
+                <option value="pt">🇵🇹 Português</option>
+                <option value="zh">🇨🇳 中文</option>
+                <option value="ja">🇯🇵 日本語</option>
+            </select>
+        </div>
+        <div class="header-right">
+            <span id="panel_build_version" class="version-badge" onclick="reloadExtensionPanel()" title="Нажмите для перезагрузки скриптов и панели (Hot Reload)">v1.0.12</span>
+        </div>
+    </header>
+
+    <!-- Вкладки режимов -->
+    <nav class="nav-tabs">
+        <button class="nav-tab active" data-tab="tab-buffer" id="tabBtnBuffer">
+            <span data-i18n="tabBuffer">Буфер (2 шага)</span>
+        </button>
+        <button class="nav-tab" data-tab="tab-direct" id="tabBtnDirect">
+            <span data-i18n="tabDirect">1 клик (Списки)</span>
+        </button>
+    </nav>
+
+    <main class="actions-container">
+        <!-- ВКЛАДКА 1: ДВУХШАГОВЫЙ БУФЕР (ШАГ А -> ШАГ B) -->
+        <div id="tab-buffer" class="tab-pane active">
+            <!-- Шаг А: Копировать -->
+            <div class="action-card">
+                <div class="card-title">
+                    <span data-i18n="stepA">Шаг А: Скопировать</span>
+                </div>
+                <button id="btnBufferCopy" class="btn-primary btn-blue" title="Скопировать выделение в буфер плагина">
+                    <span data-i18n="btnCopy">Скопировать в буфер</span>
+                </button>
+                <div class="buffer-status-box" id="bufferStatusBox">
+                    <span class="buffer-status-dot" id="bufferStatusDot"></span>
+                    <span class="buffer-status-text" id="bufferStatusText" data-i18n="bufferEmpty">Буфер пуст. Выделите объект и нажмите «Скопировать».</span>
+                </div>
+            </div>
+
+            <!-- Шаг B: Вставить -->
+            <div class="action-card">
+                <div class="card-title">
+                    <span data-i18n="stepB">Шаг B: Вставить</span>
+                </div>
+                <div class="card-subtitle" data-i18n="stepBHint">
+                    Переключитесь на нужный слой или документ:
+                </div>
+                <div class="btn-group-2">
+                    <button id="btnBufferPastePlace" class="btn-primary btn-purple btn-compact" title="Вставить на то же место артборда">
+                        <span data-i18n="btnPlace">In Place</span>
+                    </button>
+                    <button id="btnBufferPasteCenter" class="btn-primary btn-teal btn-compact" title="Вставить по центру активного артборда">
+                        <span data-i18n="btnPasteCenter">По центру</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ВКЛАДКА 2: ОДНОКЛИКОВЫЙ ПЕРЕНОС ЧЕРЕЗ СПИСКИ -->
+        <div id="tab-direct" class="tab-pane">
+            <!-- Секция слоев -->
+            <div class="action-card">
+                <div class="card-title">
+                    <span data-i18n="layersTitle">Слои (Текущий макет)</span>
+                </div>
+                <div class="selector-row">
+                    <label for="selTargetLayer" data-i18n="layerLabel">Слой:</label>
+                    <select id="selTargetLayer" class="select-box" title="Выберите целевой слой для вставки">
+                        <option value="__NEW__" data-i18n="newLayerOption">+ Новый слой (Above)</option>
+                    </select>
+                    <button id="btnRefresh" class="btn-icon-mini" title="Обновить список слоев и открытых документов">🔄</button>
+                </div>
+                <button id="btnPasteLayer" class="btn-primary btn-blue" title="Скопировать выделение на выбранный слой в то же место">
+                    <span data-i18n="btnPasteLayer">На слой (In Place)</span>
+                </button>
+            </div>
+
+            <!-- Секция документов -->
+            <div class="action-card">
+                <div class="card-title">
+                    <span data-i18n="docTitle">В другой документ</span>
+                </div>
+                <div class="selector-row">
+                    <label for="selTargetDoc" data-i18n="docLabel">Цель:</label>
+                    <select id="selTargetDoc" class="select-box" title="Выберите документ Illustrator для переноса объектов">
+                        <option value="__NEXT__" data-i18n="docNextOption">(Следующий открытый)</option>
+                    </select>
+                </div>
+                <div class="btn-group-2">
+                    <button id="btnPasteDocPlace" class="btn-primary btn-purple btn-compact" title="Вставить в целевой документ в то же место артборда">
+                        <span data-i18n="btnPlace">In Place</span>
+                    </button>
+                    <button id="btnPasteDocCenter" class="btn-primary btn-teal btn-compact" title="Вставить в целевой документ по центру артборда">
+                        <span data-i18n="btnPasteCenter">По центру</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Информационный статус -->
+    <div class="status-bar">
+        <span class="status-dot" id="statusDot"></span>
+        <span class="status-text" id="statusText" data-i18n="ready">Готов к работе. Выделите объект.</span>
+    </div>
+
+    <!-- ССЫЛКИ ПОДВАЛА (по аналогии с AI Dimension) -->
+    <footer class="footer-links">
+        <a href="#" class="footer-link" id="link_github" title="https://github.com/SaidAuita/AI-Clipboard-Paste">Author: github.com/SaidAuita/AI-Clipboard-Paste</a>
+        <a href="#" class="footer-link" id="link_tools" title="https://ph-cu-s.com/tools">More scripts: ph-cu-s.com/tools</a>
+    </footer>
+
+    <!-- Скрипты управления -->
+    <script src="js/locales.js"></script>
+    <script src="js/main.js"></script>
+</body>
+</html>

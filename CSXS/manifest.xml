@@ -1,0 +1,195 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ExtensionManifest
+        Version="7.0"
+        ExtensionBundleId="com.clipboardpaste.bundle"
+        ExtensionBundleVersion="1.0.12"
+        ExtensionBundleName="Clipboard Paste"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+    <Author>
+        <![CDATA[Said]]>
+    </Author>
+    <Contact mailto="">
+        <![CDATA[]]>
+    </Contact>
+    <Legal>
+        <![CDATA[]]>
+    </Legal>
+    <Abstract href="">
+        <![CDATA[
+        Instant In-Place Vector Duplicator for Adobe Illustrator (Layer & Document transfer bypassing OS clipboard)
+        ]]>
+    </Abstract>
+
+    <ExtensionList>
+        <Extension Id="com.clipboardpaste.panel" Version="1.0.12"/>
+        <Extension Id="com.clipboardpaste.copy" Version="1.0.12"/>
+        <Extension Id="com.clipboardpaste.paste" Version="1.0.12"/>
+        <Extension Id="com.clipboardpaste.place" Version="1.0.12"/>
+    </ExtensionList>
+
+    <ExecutionEnvironment>
+        <HostList>
+            <Host Name="ILST" Version="[24.0,99.9]"/>
+        </HostList>
+        <LocaleList>
+            <Locale Code="All"/>
+        </LocaleList>
+        <RequiredRuntimeList>
+            <RequiredRuntime Name="CSXS" Version="7.0"/>
+        </RequiredRuntimeList>
+    </ExecutionEnvironment>
+
+    <DispatchInfoList>
+        <!-- 1. Главная панель управления -->
+        <Extension Id="com.clipboardpaste.panel">
+            <DispatchInfo>
+                <Resources>
+                    <MainPath>./index.html</MainPath>
+                    <ScriptPath Engine="CP_SHARED">./jsx/hostscript.jsx</ScriptPath>
+                </Resources>
+                <Lifecycle>
+                    <AutoVisible>false</AutoVisible>
+                </Lifecycle>
+                <UI>
+                    <Type>Panel</Type>
+                    <Menu>Clipboard Paste</Menu>
+                    <Geometry>
+                        <Size>
+                            <Height>390</Height>
+                            <Width>270</Width>
+                        </Size>
+                        <MinSize>
+                            <Height>280</Height>
+                            <Width>230</Width>
+                        </MinSize>
+                        <MaxSize>
+                            <Height>600</Height>
+                            <Width>450</Width>
+                        </MaxSize>
+                    </Geometry>
+                    <Icons>
+                        <Icon Type="Normal">./icons/iconNormal.png</Icon>
+                        <Icon Type="RollOver">./icons/iconRollover.png</Icon>
+                        <Icon Type="Disabled">./icons/iconDisabled.png</Icon>
+                        <Icon Type="DarkNormal">./icons/iconDarkNormal.png</Icon>
+                        <Icon Type="DarkRollOver">./icons/iconDarkRollover.png</Icon>
+                    </Icons>
+                </UI>
+            </DispatchInfo>
+        </Extension>
+
+        <!-- 2. Команда / панель: CP_copy (Иконка CC) -->
+        <Extension Id="com.clipboardpaste.copy">
+            <DispatchInfo>
+                <Resources>
+                    <MainPath>./cp_copy.html</MainPath>
+                    <ScriptPath Engine="CP_SHARED">./jsx/hostscript.jsx</ScriptPath>
+                </Resources>
+                <Lifecycle>
+                    <AutoVisible>false</AutoVisible>
+                </Lifecycle>
+                <UI>
+                    <Type>Panel</Type>
+                    <Menu>CP_copy</Menu>
+                    <Geometry>
+                        <Size>
+                            <Height>78</Height>
+                            <Width>210</Width>
+                        </Size>
+                        <MinSize>
+                            <Height>60</Height>
+                            <Width>160</Width>
+                        </MinSize>
+                        <MaxSize>
+                            <Height>140</Height>
+                            <Width>320</Width>
+                        </MaxSize>
+                    </Geometry>
+                    <Icons>
+                        <Icon Type="Normal">./icons/iconCopyNormal.png</Icon>
+                        <Icon Type="RollOver">./icons/iconCopyRollover.png</Icon>
+                        <Icon Type="Disabled">./icons/iconCopyDisabled.png</Icon>
+                        <Icon Type="DarkNormal">./icons/iconCopyDarkNormal.png</Icon>
+                        <Icon Type="DarkRollOver">./icons/iconCopyDarkRollover.png</Icon>
+                    </Icons>
+                </UI>
+            </DispatchInfo>
+        </Extension>
+
+        <!-- 3. Команда / панель: CP_place (Иконка CPL, вставка на место) -->
+        <Extension Id="com.clipboardpaste.place">
+            <DispatchInfo>
+                <Resources>
+                    <MainPath>./cp_place.html</MainPath>
+                    <ScriptPath Engine="CP_SHARED">./jsx/hostscript.jsx</ScriptPath>
+                </Resources>
+                <Lifecycle>
+                    <AutoVisible>false</AutoVisible>
+                </Lifecycle>
+                <UI>
+                    <Type>Panel</Type>
+                    <Menu>CP_place</Menu>
+                    <Geometry>
+                        <Size>
+                            <Height>78</Height>
+                            <Width>210</Width>
+                        </Size>
+                        <MinSize>
+                            <Height>60</Height>
+                            <Width>160</Width>
+                        </MinSize>
+                        <MaxSize>
+                            <Height>140</Height>
+                            <Width>320</Width>
+                        </MaxSize>
+                    </Geometry>
+                    <Icons>
+                        <Icon Type="Normal">./icons/iconPlaceNormal.png</Icon>
+                        <Icon Type="RollOver">./icons/iconPlaceRollover.png</Icon>
+                        <Icon Type="Disabled">./icons/iconPlaceDisabled.png</Icon>
+                        <Icon Type="DarkNormal">./icons/iconPlaceDarkNormal.png</Icon>
+                        <Icon Type="DarkRollOver">./icons/iconPlaceDarkRollover.png</Icon>
+                    </Icons>
+                </UI>
+            </DispatchInfo>
+        </Extension>
+
+        <!-- 4. Команда / панель: CP_paste (Иконка CPA, вставка по центру) -->
+        <Extension Id="com.clipboardpaste.paste">
+            <DispatchInfo>
+                <Resources>
+                    <MainPath>./cp_paste.html</MainPath>
+                    <ScriptPath Engine="CP_SHARED">./jsx/hostscript.jsx</ScriptPath>
+                </Resources>
+                <Lifecycle>
+                    <AutoVisible>false</AutoVisible>
+                </Lifecycle>
+                <UI>
+                    <Type>Panel</Type>
+                    <Menu>CP_paste</Menu>
+                    <Geometry>
+                        <Size>
+                            <Height>78</Height>
+                            <Width>210</Width>
+                        </Size>
+                        <MinSize>
+                            <Height>60</Height>
+                            <Width>160</Width>
+                        </MinSize>
+                        <MaxSize>
+                            <Height>140</Height>
+                            <Width>320</Width>
+                        </MaxSize>
+                    </Geometry>
+                    <Icons>
+                        <Icon Type="Normal">./icons/iconPasteNormal.png</Icon>
+                        <Icon Type="RollOver">./icons/iconPasteRollover.png</Icon>
+                        <Icon Type="Disabled">./icons/iconPasteDisabled.png</Icon>
+                        <Icon Type="DarkNormal">./icons/iconPasteDarkNormal.png</Icon>
+                        <Icon Type="DarkRollOver">./icons/iconPasteDarkRollover.png</Icon>
+                    </Icons>
+                </UI>
+            </DispatchInfo>
+        </Extension>
+    </DispatchInfoList>
+</ExtensionManifest>

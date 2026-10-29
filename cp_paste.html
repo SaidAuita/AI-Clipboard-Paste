@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>CP_paste</title>
+    <script src="js/libs/CSInterface.js"></script>
+    <script src="js/locales.js"></script>
+    <style>
+        :root {
+            --bg: #282828;
+            --btn-bg: linear-gradient(180deg, #8e24aa 0%, #6a1b9a 100%);
+            --btn-hover: linear-gradient(180deg, #ab47bc 0%, #7b1fa2 100%);
+            --btn-active: #4a148c;
+            --badge-bg: rgba(0, 0, 0, 0.35);
+            --badge-border: rgba(255, 255, 255, 0.3);
+            --text-main: #ffffff;
+            --text-muted: #e1bee7;
+            --status-text: #90a4ae;
+            --status-ok: #66bb6a;
+            --status-err: #ef5350;
+            --status-dot: #546e7a;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+        html, body {
+            width: 100%;
+            height: 100%;
+            background: var(--bg);
+            color: var(--text-main);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            font-size: 11px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            padding: 6px 8px;
+        }
+        .main-btn {
+            width: 100%;
+            height: 48px;
+            background: var(--btn-bg);
+            color: var(--text-main);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 6px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 10px;
+            gap: 8px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+            transition: all 0.12s ease;
+        }
+        .main-btn:hover {
+            background: var(--btn-hover);
+            transform: translateY(-1px);
+            box-shadow: 0 3px 8px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+        }
+        .main-btn:active {
+            background: var(--btn-active);
+            transform: translateY(1px);
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+        }
+        .badge {
+            background: var(--badge-bg);
+            border: 1px solid var(--badge-border);
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 800;
+            letter-spacing: 0.5px;
+            padding: 4px 6px;
+            color: #ffffff;
+            min-width: 36px;
+            text-align: center;
+            box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.4);
+        }
+        .btn-labels {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            flex-grow: 1;
+            overflow: hidden;
+        }
+        .btn-title {
+            font-size: 12px;
+            font-weight: 700;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .btn-sub {
+            font-size: 9px;
+            color: var(--text-muted);
+            white-space: nowrap;
+        }
+        .hotkey-hint {
+            background: rgba(0, 0, 0, 0.25);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 3px;
+            font-size: 10px;
+            font-weight: 700;
+            padding: 2px 5px;
+            color: #e0e0e0;
+        }
+        .status-bar {
+            margin-top: 4px;
+            height: 16px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 10px;
+            color: var(--status-text);
+            overflow: hidden;
+            white-space: nowrap;
+            text-overflow: ellipsis;
+            padding: 0 2px;
+        }
+        .dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: var(--status-dot);
+            flex-shrink: 0;
+            transition: background 0.2s ease;
+        }
+        .dot.ok { background: var(--status-ok); box-shadow: 0 0 5px var(--status-ok); }
+        .dot.err { background: var(--status-err); box-shadow: 0 0 5px var(--status-err); }
+        .status-msg.ok { color: var(--status-ok); font-weight: 600; }
+        .status-msg.err { color: var(--status-err); font-weight: 600; }
+    </style>
+</head>
+<body>
+    <button id="btnAction" class="main-btn" title="Нажмите для вставки по центру или используйте горячую клавишу F7">
+        <div class="badge">CPA</div>
+        <div class="btn-labels">
+            <span id="btnTitle" class="btn-title">Вставить по центру</span>
+            <span id="btnSub" class="btn-sub">По центру артборда</span>
+        </div>
+        <div class="hotkey-hint">F7</div>
+    </button>
+    <div class="status-bar">
+        <div id="dot" class="dot"></div>
+        <span id="statusMsg" class="status-msg">Готов к работе</span>
+    </div>
+
+    <script>
+    (function() {
+        var cs = new CSInterface();
+        var btnAction = document.getElementById("btnAction");
+        var btnTitle = document.getElementById("btnTitle");
+        var btnSub = document.getElementById("btnSub");
+        var dot = document.getElementById("dot");
+        var statusMsg = document.getElementById("statusMsg");
+        var lastRunTime = 0;
+        var currentLang = "ru";
+        var hasActiveStatus = false;
+
+        function getDict() {
+            var all = window.CP_LOCALES || {};
+            return all[currentLang] || all.en || all.ru || {};
+        }
+
+        function applyLanguage(lang) {
+            if (!lang || !window.CP_LOCALES) return;
+            if (!window.CP_LOCALES[lang]) lang = "ru";
+            currentLang = lang;
+            var dict = getDict();
+            if (btnTitle && dict.cpPasteTitle) btnTitle.textContent = dict.cpPasteTitle;
+            if (btnSub && dict.cpPasteSub) btnSub.textContent = dict.cpPasteSub;
+            if (!hasActiveStatus && dict.cpReady) {
+                setStatus(dict.cpReady, "");
+            }
+        }
+
+        function setStatus(text, type) {
+            statusMsg.textContent = text;
+            statusMsg.className = "status-msg" + (type ? (" " + type) : "");
+            dot.className = "dot" + (type ? (" " + type) : "");
+            hasActiveStatus = (type === "ok" || type === "err");
+        }
+
+        function updateTheme() {
+            try {
+                var skin = cs.getHostEnvironment().appSkinInfo;
+                if (skin && skin.panelBackgroundColor) {
+                    var c = skin.panelBackgroundColor.color;
+                    var r = Math.round(c.red), g = Math.round(c.green), b = Math.round(c.blue);
+                    document.documentElement.style.setProperty("--bg", "rgb(" + r + "," + g + "," + b + ")");
+                }
+            } catch(e) {}
+        }
+
+        function checkLanguage() {
+            var saved = localStorage.getItem("cp_lang");
+            if (saved) applyLanguage(saved);
+            cs.evalScript('#targetengine "CP_SHARED"\n$.global.CP_LANG;', function(res) {
+                if (res && res !== "undefined" && res !== "EvalScript error.") {
+                    applyLanguage(res);
+                }
+            });
+        }
+
+        function runPaste() {
+            var now = Date.now();
+            if (now - lastRunTime < 350) return;
+            lastRunTime = now;
+
+            var dict = getDict();
+            setStatus(dict.cpPasting || "Вставка...", "");
+
+            var extRoot = cs.getSystemPath(SystemPath.EXTENSION);
+            var jsxFile = (extRoot + '/jsx/hostscript.jsx').replace(/\\/g, '/');
+            var script = '#targetengine "CP_SHARED"\n' +
+                'try { ' +
+                '  if (typeof $.global.ClipboardPasteHost === "undefined" || !$.global.ClipboardPasteHost || !$.global.ClipboardPasteHost.pasteFromBuffer) { ' +
+                '    $.evalFile(new File("' + jsxFile + '")); ' +
+                '  } ' +
+                '  var host = $.global.ClipboardPasteHost || ClipboardPasteHost; ' +
+                '  host.pasteFromBuffer("CENTER"); ' +
+                '} catch(e) { "ERR: " + (e.message || String(e)); }';
+
+            cs.evalScript(script, function(res) {
+                try {
+                    var d = getDict();
+                    if (typeof res === "string" && res.indexOf("ERR:") === 0) {
+                        setStatus(res, "err");
+                        return;
+                    }
+                    var data = JSON.parse(res);
+                    if (data.success) {
+                        var timeStr = (new Date()).toTimeString().substr(0, 8);
+                        var msg = (d.cpPasteDone || "✅ Вставлено {count} об. в центр").replace("{count}", data.count);
+                        setStatus(msg + " (" + timeStr + ")", "ok");
+                    } else {
+                        var errMap = {
+                            "NO_DOCUMENTS": d.cpErrNoDoc || "⚠️ Нет открытых документов",
+                            "BUFFER_EMPTY": d.cpErrBufEmpty || "⚠️ Буфер пуст! Нажмите [CC]",
+                            "DOC_CLOSED": d.cpErrDocClosed || "⚠️ Исходный документ закрыт"
+                        };
+                        setStatus(errMap[data.error] || ("⚠️ " + data.error), "err");
+                    }
+                } catch(e) {
+                    setStatus("Ошибка: " + e.message, "err");
+                }
+            });
+        }
+
+        btnAction.addEventListener("click", runPaste);
+
+        window.addEventListener("focus", function() {
+            checkLanguage();
+            runPaste();
+        });
+
+        // Слушатель смены языка из основной панели
+        cs.addEventListener("com.clipboardpaste.langChanged", function(evt) {
+            if (evt && evt.data) applyLanguage(evt.data);
+        });
+
+        // Перезагрузка по правому клику мыши (Hot Reload)
+        window.addEventListener("contextmenu", function(e) {
+            e.preventDefault();
+            window.location.reload(true);
+        });
+
+        updateTheme();
+        checkLanguage();
+    })();
+    </script>
+</body>
+</html>

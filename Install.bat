@@ -1,4 +1,5 @@
 @echo off
+chcp 65001 >nul
 setlocal enabledelayedexpansion
 
 title Clipboard Paste v1.0.12 - Installer
@@ -59,15 +60,15 @@ echo ===========================================================================
 echo  INSTALLATION COMPLETE!
 echo ================================================================================
 echo.
-echo  Как открыть панель в Adobe Illustrator:
-echo  1. Перезапустите Adobe Illustrator (если был открыт).
-echo  2. Откройте меню: Окно -> Расширения -> Clipboard Paste (Window -> Extensions -> Clipboard Paste).
+echo  How to open extension in Adobe Illustrator:
+echo  1. Restart Adobe Illustrator (if it is currently running).
+echo  2. Open menu: Window -^> Extensions -^> Clipboard Paste.
 echo.
-echo  Горячие клавиши в активной панели:
-echo  - [ C ] или [ 1 ] : Скопировать выделение в буфер (Шаг А)
-echo  - [ F ] или [ 2 ] : Вставить в те же координаты (In Place)
-echo  - [ V ] или [ 3 ] : Вставить по центру активного артборда
-echo  - [ Tab ]         : Переключение вкладок (Буфер / Списки)
+echo  Shortcuts in active panel:
+echo  - [ C ] or [ 1 ]  : Copy selection to buffer (Step A)
+echo  - [ F ] or [ 2 ]  : Paste into same coordinates (In Place)
+echo  - [ V ] or [ 3 ]  : Paste to center of active artboard
+echo  - [ Tab ]         : Switch tabs (Buffer / Lists)
 echo.
 echo ================================================================================
 echo.

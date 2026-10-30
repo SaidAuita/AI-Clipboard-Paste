@@ -10,16 +10,16 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-v1.0.12-blue.svg?style=flat-square" alt="Version">
+  <img src="https://img.shields.io/badge/Native%20Plugin-v1.14%20(Рекомендуется)-brightgreen.svg?style=flat-square" alt="Native Plugin v1.14">
+  <img src="https://img.shields.io/badge/CEP%20Extension-v1.0.12-blue.svg?style=flat-square" alt="CEP Version v1.0.12">
   <img src="https://img.shields.io/badge/Adobe%20Illustrator-2020--2026%2B-orange.svg?style=flat-square" alt="Illustrator Compatibility">
-  <img src="https://img.shields.io/badge/Platform-Windows%20%7C%20macOS-lightgrey.svg?style=flat-square" alt="OS Support">
-  <img src="https://img.shields.io/badge/Architecture-In--Memory%20DOM%20(No%20OLE)-success.svg?style=flat-square" alt="Architecture">
+  <img src="https://img.shields.io/badge/Platform-Windows%20x64%20%7C%20macOS-lightgrey.svg?style=flat-square" alt="OS Support">
   <img src="https://img.shields.io/badge/License-MIT-green.svg?style=flat-square" alt="License">
 </p>
 
 <p align="center">
   <a href="README.md"><b>🇬🇧 Read Documentation in English</b></a> | 
-  <a href="https://github.com/SaidAuita/AI-Clipboard-Paste/releases/latest"><b>📦 Скачать релиз (v1.0.12)</b></a>
+  <a href="https://github.com/SaidAuita/AI-Clipboard-Paste/releases/latest"><b>📦 Скачать релиз</b></a>
 </p>
 
 ---
@@ -75,7 +75,7 @@
 
 **AI-Clipboard-Paste** полностью исключает обращение к системному буферу обмена Windows и падающему внутреннему сериализатору Illustrator:
 
-* ⚡ **Прямое дублирование в оперативной памяти:** Все операции выполняются напрямую в адресном пространстве процесса Illustrator через движок ExtendScript DOM (`CP_SHARED`).
+* ⚡ **Прямое дублирование в оперативной памяти:** Все операции выполняются напрямую в адресном пространстве процесса Illustrator через нативное ядро C++ SweetPea DOM или скоростной ExtendScript (`CP_SHARED`).
 * 🎯 **100% Векторная точность:** Полное сохранение плашечных и триадных цветов (CMYK/Spot), оверпринтов, режимов наложения, сложных составных контуров и обтравочных масок.
 * 📍 **Идеальное позиционирование (In Place):** Объекты вставляются точно в свои исходные координаты `[x, y]` артборда либо центрируются на видимой области.
 * 🚀 **В 5–10 раз быстрее:** Отсутствуют задержки на конвертацию тяжёлых векторов через ОС.
@@ -83,7 +83,43 @@
 
 ---
 
-## 📸 Скриншоты и режимы работы
+## ⚡ Два варианта работы: выберите удобный для вас
+
+| Возможность | ⚡ **Нативный C++ плагин (`.aip`)** <br> **(РЕКОМЕНДУЕТСЯ)** | 🌐 **CEP расширение (HTML5/JS)** |
+|:---|:---:|:---:|
+| **Горячие клавиши (F5, F6, F7)** | ✅ **Работают сразу из коробки** (низкоуровневый Win32 хук) | ⚠️ Требуется загрузка набора экшенов `.aia` |
+| **Никаких лишних/всплывающих окон** | ✅ **100% бесшумная работа в фоне**, экран не моргает | ❌ Открывает/моргает вспомогательными микро-панелями |
+| **Интерфейс** | ✅ **Пиксель-в-пиксель нативный стиль Illustrator** (тёмная/светлая темы) | 🌐 Веб-панель HTML5/CSS |
+| **Настройка горячих клавиш** | ✅ Встроенный диалог **Settings...** с переназначением клавиш | ⚙️ Настройка через стандартные Actions Illustrator |
+| **Прямой перенос по слоям** | ➖ Фокус на мгновенном дублировании в памяти | ✅ Вкладка «1-Click Direct» для отправки на слои |
+| **Целевая платформа** | Windows x64 (AI 2020–2026+) *(Исходники C++ в репозитории)* | Windows и macOS |
+| **Где находится в репозитории** | Папка [`native-plugin/`](native-plugin/) | Корень / [`Install.bat`](Install.bat) |
+
+---
+
+## 🌟 1. Нативный C++ плагин (.aip) — Приоритетная версия
+
+**Нативный C++ плагин** — это самый быстрый, чистый и комфортный способ работы в Adobe Illustrator CC 2020 – 2026+:
+
+<p align="center">
+  <img src="images/Clipboard Paste Plugin_01.png" alt="Нативная палитра Clipboard Paste в тёмной теме Illustrator" width="290">
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+  <img src="images/Clipboard Paste Plugin_02.png" alt="Настройки горячих клавиш нативного плагина" width="350">
+</p>
+
+* **🔥 Горячие клавиши работают из коробки:** Нажимайте `F5` (копировать в буфер), `F6` (вставить на место) или `F7` (вставить в центр экрана) в любой момент. Плагин перехватывает нажатия глобально без необходимости кликать мышью по палитре или переключать фокус!
+* **🚫 Никаких всплывающих микро-панелей и морганий:** В отличие от CEP-версии, которой для перехвата сочетаний клавиш требовалось на доли секунды открывать вспомогательные HTML-окна (`cp_copy`, `cp_place`), нативный плагин работает напрямую в адресном пространстве процесса `Illustrator.exe`. Никаких мелькающих окон на экране.
+* **🎨 Нативное оформление и поддержка всех тем:** Палитра повторяет дизайн стандартных кнопок палитры *Свойства (Properties)* со скруглением 3px и автоматически перерисовывается под текущую тему Illustrator (тёмная, средне-тёмная, средне-светлая, светлая).
+* **⚙️ Графический диалог настроек:** Кнопка **Settings...** открывает окно переназначения любых клавиш (`F1`–`F12`, `Alt+...`, `Ctrl+...`) и переключатель опции автоматического выделения объектов после вставки (*Select object(s) after paste*).
+
+### Быстрая установка нативного плагина:
+1. Откройте папку [`native-plugin/`](native-plugin/) (или скачайте готовый архив из секции Releases).
+2. Запустите **`Install_Plugin.bat`** (инсталлятор автоматически обнаружит все установленные версии Illustrator 2020..2026+ и скопирует файл `ClipboardPaste.aip`).
+3. Запустите Adobe Illustrator — палитра ждёт вас в меню **Окно ➔ Clipboard Paste** (Window ➔ Clipboard Paste).
+
+---
+
+## 🌐 2. CEP расширение (HTML5 / JS) — Альтернативная версия
 
 ### 1. Двухшаговый независимый буфер (Вкладка «2-Step Buffer»)
 Классический сценарий: скопировать объект в одном документе ➔ переключиться в любой другой документ или слой ➔ вставить на то же место или по центру.

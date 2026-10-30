@@ -10,16 +10,16 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-v1.0.12-blue.svg?style=flat-square" alt="Version">
+  <img src="https://img.shields.io/badge/Native%20Plugin-v1.14%20(Recommended)-brightgreen.svg?style=flat-square" alt="Native Plugin v1.14">
+  <img src="https://img.shields.io/badge/CEP%20Extension-v1.0.12-blue.svg?style=flat-square" alt="CEP Version v1.0.12">
   <img src="https://img.shields.io/badge/Adobe%20Illustrator-2020--2026%2B-orange.svg?style=flat-square" alt="Illustrator Compatibility">
-  <img src="https://img.shields.io/badge/Platform-Windows%20%7C%20macOS-lightgrey.svg?style=flat-square" alt="OS Support">
-  <img src="https://img.shields.io/badge/Architecture-In--Memory%20DOM%20(No%20OLE)-success.svg?style=flat-square" alt="Architecture">
+  <img src="https://img.shields.io/badge/Platform-Windows%20x64%20%7C%20macOS-lightgrey.svg?style=flat-square" alt="OS Support">
   <img src="https://img.shields.io/badge/License-MIT-green.svg?style=flat-square" alt="License">
 </p>
 
 <p align="center">
   *( 🇬🇧 <a href="#english"><b>English</b></a> | 🇷🇺 <a href="#русский"><b>Русский</b></a> )* &nbsp;•&nbsp; 
-  <a href="https://github.com/SaidAuita/AI-Clipboard-Paste/releases/latest"><b>📦 Download Latest Release (v1.0.12)</b></a>
+  <a href="https://github.com/SaidAuita/AI-Clipboard-Paste/releases/latest"><b>📦 Download Latest Release</b></a>
 </p>
 
 ---
@@ -78,7 +78,7 @@ To diagnose this issue systematically, a low-level diagnostic monitor — **[AI-
 
 **AI-Clipboard-Paste** provides a permanent fix by **completely bypassing the Windows OLE clipboard and Illustrator's fragile internal serializer**:
 
-* ⚡ **Direct In-Memory Duplication:** All copy and paste operations occur entirely within Illustrator's memory space via the high-speed ExtendScript DOM engine (`CP_SHARED`).
+* ⚡ **Direct In-Memory Duplication:** All copy and paste operations occur entirely within Illustrator's memory space via the native C++ SweetPea DOM engine or high-speed ExtendScript (`CP_SHARED`).
 * 🎯 **100% Vector Fidelity:** Flawless preservation of CMYK/Spot swatches, overprints, transparency blending, complex compound paths, and clipping masks.
 * 📍 **In-Place Precision:** Objects align exactly to their original `[x, y]` artboard coordinates or can be centered on the target view.
 * 🚀 **5–10× Faster:** Eliminates the latency of serializing and deserializing heavy vector payloads through the operating system.
@@ -86,7 +86,43 @@ To diagnose this issue systematically, a low-level diagnostic monitor — **[AI-
 
 ---
 
-### 📸 Interface & Workflows
+### ⚡ Two Editions Available: Choose What Fits You
+
+| Feature | ⚡ **Native C++ Plugin (`.aip`)** <br> **(RECOMMENDED)** | 🌐 **CEP Extension (HTML5/JS)** |
+|:---|:---:|:---:|
+| **Global Hotkeys (F5, F6, F7)** | ✅ **Works out of the box** (low-level Win32 thread hook) | ⚠️ Requires importing Illustrator `.aia` Actions |
+| **No Extra Popups or Flashes** | ✅ **100% silent & seamless background execution** | ❌ Flashes/opens companion HTML micro-panels |
+| **User Interface** | ✅ **Pixel-perfect Adobe Spectrum UI** (Dark & Light themes) | 🌐 Modern HTML5/CSS panel |
+| **Shortcut Configuration** | ✅ Graphical **Settings...** dialog with key remapping | ⚙️ Configured via Illustrator Actions |
+| **Direct Transfer by Layer** | ➖ Core fast duplication focus | ✅ Includes «1-Click Direct» layer transfer tab |
+| **Target Platform** | Windows x64 (AI 2020–2026+) *(C++ source in repo)* | Windows & macOS |
+| **Location in Repo** | [`native-plugin/`](native-plugin/) | Root / [`Install.bat`](Install.bat) |
+
+---
+
+### 🌟 1. Native C++ Plugin (.aip) — The Recommended Experience
+
+The **Native C++ Plugin** is the primary, most streamlined way to use Clipboard Paste in Adobe Illustrator CC 2020 – 2026+:
+
+<p align="center">
+  <img src="images/Clipboard Paste Plugin_01.png" alt="Native C++ Dockable Panel in Illustrator Dark Theme" width="290">
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+  <img src="images/Clipboard Paste Plugin_02.png" alt="Native C++ Hotkey & Preferences Dialog" width="350">
+</p>
+
+* **🔥 Hotkeys Work Instantly Out of the Box:** Press `F5` (Copy to Buffer), `F6` (Paste In Place), or `F7` (Paste to Center) at any time. Keystrokes are captured globally without needing to click the panel or switch focus!
+* **🚫 Zero Extra Panels or Visual Flashes:** Unlike the CEP extension (which had to briefly spawn micro-panels to execute commands), the native plugin runs directly inside `Illustrator.exe` thread memory. No popups, no focus-stealing, no screen blinking.
+* **🎨 100% Native Illustrator Theme Adaptation:** Fully custom-rendered dockable palette with 3px rounded buttons matching Illustrator's native Properties panel (`Edit Artboards`). Dynamically matches all 4 UI brightness themes (Dark, Medium Dark, Medium Light, Light).
+* **⚙️ In-Panel Preferences Dialog:** Click **Settings...** to remap any function key (`F1`–`F12`, `Alt+...`, `Ctrl+...`) and toggle the *"Select object(s) after paste"* option.
+
+#### Quick Native Plugin Installation:
+1. Open the [`native-plugin/`](native-plugin/) folder (or download the precompiled zip from Releases).
+2. Run **`Install_Plugin.bat`** (it automatically detects all installed Illustrator versions 2020..2026+ and copies `ClipboardPaste.aip`).
+3. Launch Adobe Illustrator and open **Window ➔ Clipboard Paste**.
+
+---
+
+### 🌐 2. CEP Extension Edition (Alternative)
 
 #### 1. Two-Step Independent Buffer (Tab: «2-Step Buffer»)
 Classic clipboard workflow: copy artwork in Document A ➔ switch to any other document or layer ➔ paste in place or centered.

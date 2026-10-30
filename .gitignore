@@ -12,3 +12,11 @@ tools/**/bin/
 tools/**/obj/
 tools/**/build_backup/
 tools/**/*.user
+
+# Native C++ Plugin build artifacts
+native-plugin/build/
+native-plugin/Build_DEV/
+*.obj
+*.lib
+*.exp
+*.res

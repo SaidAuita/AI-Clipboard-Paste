@@ -1,0 +1,2 @@
+16300.svg		ClipboardPaste_Light@2x.svg
+16301.svg		ClipboardPaste_Dark@2x.svg

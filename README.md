@@ -1,10 +1,6 @@
 # AI-Clipboard-Paste 🚀
 
 <p align="center">
-  <img src="icons/icon_128.png" width="96" height="96" alt="AI-Clipboard-Paste Logo">
-</p>
-
-<p align="center">
   <b>Instant, rock-solid vector duplication in Adobe Illustrator — completely bypassing the broken Windows OLE clipboard.</b><br>
   <i>100% Vector Fidelity • In-Place Alignment • Global Hotkeys (F5 / F6 / F7) • 8 UI Languages</i>
 </p>

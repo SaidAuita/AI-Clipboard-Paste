@@ -1,10 +1,6 @@
 # AI-Clipboard-Paste 🚀
 
 <p align="center">
-  <img src="icons/icon_128.png" width="96" height="96" alt="AI-Clipboard-Paste Logo">
-</p>
-
-<p align="center">
   <b>Мгновенное и надежное дублирование векторных объектов в Adobe Illustrator в обход сбоев системного буфера обмена Windows OLE.</b><br>
   <i>100% векторная точность • Дублирование в те же координаты (In Place) • Глобальные горячие клавиши F5 / F6 / F7 • 8 языков интерфейса</i>
 </p>

@@ -1,5 +1,9 @@
 # Clipboard Paste — Native C++ Plugin (.aip)
 
+<p align="center">
+  <a href="README_RU.md"><b>🇷🇺 Читать документацию на русском</b></a>
+</p>
+
 High-speed native C++ vector duplicator plugin for **Adobe Illustrator 2020 – 2026+**.
 
 ## 🚀 Key Advantages Over CEP Extension

@@ -6,7 +6,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Native%20Plugin-v1.14%20(Рекомендуется)-brightgreen.svg?style=flat-square" alt="Native Plugin v1.14">
+  <img src="https://img.shields.io/badge/Native%20Plugin-v1.15%20(Рекомендуется)-brightgreen.svg?style=flat-square" alt="Native Plugin v1.15">
   <img src="https://img.shields.io/badge/CEP%20Extension-v1.0.12-blue.svg?style=flat-square" alt="CEP Version v1.0.12">
   <img src="https://img.shields.io/badge/Adobe%20Illustrator-2020--2026%2B-orange.svg?style=flat-square" alt="Illustrator Compatibility">
   <img src="https://img.shields.io/badge/Platform-Windows%20x64%20%7C%20macOS-lightgrey.svg?style=flat-square" alt="OS Support">
@@ -14,11 +14,20 @@
 </p>
 
 <p align="center">
-  <a href="README.md"><b>🇬🇧 Read Documentation in English</b></a> | 
-  <a href="https://github.com/SaidAuita/AI-Clipboard-Paste/releases/latest"><b>📦 Скачать релиз</b></a>
+  <a href="README.md"><b>🇬🇧 Read Documentation in English</b></a> &nbsp;•&nbsp; 
+  <a href="https://github.com/SaidAuita/AI-Clipboard-Paste/releases/download/v1.15/Clipboard_Paste_Plugin_v1.15.zip"><b>⚡ Скачать нативный плагин v1.15 (.zip)</b></a> &nbsp;•&nbsp; 
+  <a href="https://github.com/SaidAuita/AI-Clipboard-Paste/releases"><b>📦 Все релизы</b></a>
 </p>
 
 ---
+
+> [!IMPORTANT]
+> ### 📢 Обновление v1.15: Полностью бесшумная работа (Звуковой сигнал убран)
+> **Если вы скачивали плагин ранее (версии v1.12–v1.14):** обязательно обновитесь до **v1.15**!  
+> В ранних сборках в процедурах копирования и вставки оставался тестовый отладочный вызов `MessageBeep(MB_OK)`. Из-за этого на ноутбуках и компьютерах со стандартной звуковой схемой Windows при каждом копировании и каждой вставке раздавался навязчивый системный звук («Default Beep» / фоновый звук Windows).  
+> В версии **v1.15** этот вызов полностью удален. Теперь плагин работает **абсолютно бесшумно**, как стандартный буфер Illustrator.  
+> 
+> 📥 **Скачать установщик нативного плагина:** [**Clipboard_Paste_Plugin_v1.15.zip**](https://github.com/SaidAuita/AI-Clipboard-Paste/releases/download/v1.15/Clipboard_Paste_Plugin_v1.15.zip) *(Страница релиза: [Релиз v1.15](https://github.com/SaidAuita/AI-Clipboard-Paste/releases/tag/v1.15))*
 
 ## ⚡ Проблема: отвал буфера обмена в Illustrator при активной работе
 
@@ -109,8 +118,8 @@
 * **⚙️ Графический диалог настроек:** Кнопка **Settings...** открывает окно переназначения любых клавиш (`F1`–`F12`, `Alt+...`, `Ctrl+...`) и переключатель опции автоматического выделения объектов после вставки (*Select object(s) after paste*).
 
 ### Быстрая установка нативного плагина:
-1. Откройте папку [`native-plugin/`](native-plugin/) (или скачайте готовый архив из секции Releases).
-2. Запустите **`Install_Plugin.bat`** (инсталлятор автоматически обнаружит все установленные версии Illustrator 2020..2026+ и скопирует файл `ClipboardPaste.aip`).
+1. Скачайте архив установщика: [**Clipboard_Paste_Plugin_v1.15.zip**](https://github.com/SaidAuita/AI-Clipboard-Paste/releases/download/v1.15/Clipboard_Paste_Plugin_v1.15.zip) (или возьмите файлы из папки [`native-plugin/`](native-plugin/)).
+2. Распакуйте и запустите **`Install_Plugin.bat`** (инсталлятор автоматически обнаружит все установленные версии Illustrator 2020..2026+ и скопирует файл `ClipboardPaste.aip`).
 3. Запустите Adobe Illustrator — палитра ждёт вас в меню **Окно ➔ Clipboard Paste** (Window ➔ Clipboard Paste).
 
 ---

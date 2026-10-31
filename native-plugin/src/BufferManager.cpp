@@ -289,7 +289,6 @@ bool BufferManager::CopySelection() {
     }
 
     m_hasData = true;
-    MessageBeep(MB_OK);
     PluginLog("[CopySelection SUCCESS] Stored %zu top-level graphic item(s) in hidden buffer", m_clonedItems.size());
     return true;
 }
@@ -402,7 +401,6 @@ bool BufferManager::PasteInPlace() {
     }
 
     sAIDocument->RedrawDocument();
-    MessageBeep(MB_OK);
     PluginLog("[PasteInPlace SUCCESS] Duplicated %zu item(s) (dx=%.2f, dy=%.2f, isSameDoc=%d)",
               newItems.size(), dx, dy, isSameDoc);
     return !newItems.empty();
@@ -550,7 +548,6 @@ bool BufferManager::PasteCenter() {
     }
 
     sAIDocument->RedrawDocument();
-    MessageBeep(MB_OK);
     PluginLog("[PasteCenter SUCCESS] Duplicated %zu item(s) to view center (dx=%.2f, dy=%.2f, isSameDoc=%d)",
               newItems.size(), dx, dy, isSameDoc);
     return true;

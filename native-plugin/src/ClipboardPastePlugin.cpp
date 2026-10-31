@@ -4,7 +4,7 @@
 #include <windows.h>
 #include <shellapi.h>
 
-#define PLUGIN_VERSION_STR     "v1.14"
+#define PLUGIN_VERSION_STR     "v1.15"
 
 #define IDC_STATIC_TITLE       100
 #define IDC_STATIC_VERSION     101

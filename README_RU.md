@@ -2,11 +2,11 @@
 
 <p align="center">
   <b>Мгновенное и надежное дублирование векторных объектов в Adobe Illustrator в обход сбоев системного буфера обмена Windows OLE.</b><br>
-  <i>100% векторная точность • Дублирование в те же координаты (In Place) • Глобальные горячие клавиши F5 / F6 / F7 • 8 языков интерфейса</i>
+  <i>100% векторная точность • Дублирование в те же координаты (In Place) • Глобальные горячие клавиши F5 / F6 / F7 / F8 • 8 языков интерфейса</i>
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Native%20Plugin-v1.15%20(Рекомендуется)-brightgreen.svg?style=flat-square" alt="Native Plugin v1.15">
+  <img src="https://img.shields.io/badge/Native%20Plugin-v1.17%20(Рекомендуется)-brightgreen.svg?style=flat-square" alt="Native Plugin v1.17">
   <img src="https://img.shields.io/badge/CEP%20Extension-v1.0.12-blue.svg?style=flat-square" alt="CEP Version v1.0.12">
   <img src="https://img.shields.io/badge/Adobe%20Illustrator-2020--2026%2B-orange.svg?style=flat-square" alt="Illustrator Compatibility">
   <img src="https://img.shields.io/badge/Platform-Windows%20x64%20%7C%20macOS-lightgrey.svg?style=flat-square" alt="OS Support">
@@ -15,19 +15,20 @@
 
 <p align="center">
   <a href="README.md"><b>🇬🇧 Read Documentation in English</b></a> &nbsp;•&nbsp; 
-  <a href="https://github.com/SaidAuita/AI-Clipboard-Paste/releases/download/v1.15/Clipboard_Paste_Plugin_v1.15.zip"><b>⚡ Скачать нативный плагин v1.15 (.zip)</b></a> &nbsp;•&nbsp; 
+  <a href="https://github.com/SaidAuita/AI-Clipboard-Paste/releases/download/v1.17/Clipboard_Paste_Plugin_v1.17.zip"><b>⚡ Скачать нативный плагин v1.17 (.zip)</b></a> &nbsp;•&nbsp; 
   <a href="https://github.com/SaidAuita/AI-Clipboard-Paste/releases"><b>📦 Все релизы</b></a>
 </p>
 
 ---
 
 > [!IMPORTANT]
-> ### 📢 Обновление v1.15: Полностью бесшумная работа (Звуковой сигнал убран)
-> **Если вы скачивали плагин ранее (версии v1.12–v1.14):** обязательно обновитесь до **v1.15**!  
-> В ранних сборках в процедурах копирования и вставки оставался тестовый отладочный вызов `MessageBeep(MB_OK)`. Из-за этого на ноутбуках и компьютерах со стандартной звуковой схемой Windows при каждом копировании и каждой вставке раздавался навязчивый системный звук («Default Beep» / фоновый звук Windows).  
-> В версии **v1.15** этот вызов полностью удален. Теперь плагин работает **абсолютно бесшумно**, как стандартный буфер Illustrator.  
+> ### 📢 Обновление v1.17: Опция отключения плагина и вставка на все артборды (F8)
+> - **Чекбокс отключения плагина и горячих клавиш:** В диалоге настроек (**Settings...**) добавлен чекбокс `Disable plugin (ignore hotkeys)`. При его активации плагин полностью отключает перехват клавиш (`F5`, `F6`, `F7`, `F8`), передавая управление стандартным функциям Illustrator. По умолчанию при установке плагин включен (`Disabled=0`).
+> - **Вставка на все артборды (`F8`):** Быстрое дублирование выделения сразу на все монтажные области активного документа.
+> - **Полностью бесшумная работа:** Отсутствуют системные звуки при копировании и вставке.
+> - **Наглядная индикация статуса:** На карточке буфера отображается `Status: Disabled (Hotkeys off)`, а на кнопках — отметка `(Off)`.
 > 
-> 📥 **Скачать установщик нативного плагина:** [**Clipboard_Paste_Plugin_v1.15.zip**](https://github.com/SaidAuita/AI-Clipboard-Paste/releases/download/v1.15/Clipboard_Paste_Plugin_v1.15.zip) *(Страница релиза: [Релиз v1.15](https://github.com/SaidAuita/AI-Clipboard-Paste/releases/tag/v1.15))*
+> 📥 **Скачать установщик нативного плагина:** [**Clipboard_Paste_Plugin_v1.17.zip**](https://github.com/SaidAuita/AI-Clipboard-Paste/releases/download/v1.17/Clipboard_Paste_Plugin_v1.17.zip) *(Страница релиза: [Релиз v1.17](https://github.com/SaidAuita/AI-Clipboard-Paste/releases/tag/v1.17))*
 
 ## ⚡ Проблема: отвал буфера обмена в Illustrator при активной работе
 

@@ -13,6 +13,7 @@ public:
     bool CopySelection();
     bool PasteInPlace();
     bool PasteCenter();
+    bool PasteAllArtboards();
     void Clear();
 
     bool HasData() const { return m_hasData; }

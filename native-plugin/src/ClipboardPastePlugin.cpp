@@ -4,24 +4,26 @@
 #include <windows.h>
 #include <shellapi.h>
 
-#define PLUGIN_VERSION_STR     "v1.15"
+#define PLUGIN_VERSION_STR     "v1.17"
 
 #define IDC_STATIC_TITLE       100
 #define IDC_STATIC_VERSION     101
 #define IDC_BTN_COPY           102
 #define IDC_BTN_PASTE_IN_PLACE 103
 #define IDC_BTN_PASTE_CENTER   104
-#define IDC_BTN_CLEAR          105
-#define IDC_STATIC_STATUS      106
-#define IDC_BTN_SETTINGS       107
-#define IDC_STATIC_LINK_AUTHOR 108
-#define IDC_STATIC_LINK_TOOLS  109
+#define IDC_BTN_PASTE_ALL_ARTBOARDS 105
+#define IDC_BTN_CLEAR          106
+#define IDC_STATIC_STATUS      107
+#define IDC_BTN_SETTINGS       108
+#define IDC_STATIC_LINK_AUTHOR 109
+#define IDC_STATIC_LINK_TOOLS  110
 
 static HWND g_hStaticHeaderTitle = NULL;
 static HWND g_hStaticHeaderVersion = NULL;
 static HWND g_hBtnCopy = NULL;
 static HWND g_hBtnPasteInPlace = NULL;
 static HWND g_hBtnPasteCenter = NULL;
+static HWND g_hBtnPasteAllArtboards = NULL;
 static HWND g_hBtnClear = NULL;
 static HWND g_hBtnSettings = NULL;
 static HWND g_hStaticStatus = NULL;
@@ -292,6 +294,10 @@ static void RelayoutPanel(HWND hwnd) {
     }
     if (g_hBtnPasteCenter) {
         SetWindowPos(g_hBtnPasteCenter, NULL, pad, y, btnW, btnH, SWP_NOZORDER);
+        y += btnH + 4;
+    }
+    if (g_hBtnPasteAllArtboards) {
+        SetWindowPos(g_hBtnPasteAllArtboards, NULL, pad, y, btnW, btnH, SWP_NOZORDER);
         y += btnH + 5;
     }
     if (g_hBtnClear && g_hBtnSettings) {
@@ -360,6 +366,12 @@ static LRESULT CALLBACK PanelWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM 
                     ClipboardPastePlugin::GetInstance().UpdateUI();
                     return 0;
                 }
+                case IDC_BTN_PASTE_ALL_ARTBOARDS: {
+                    AppContext appContext(pluginRef);
+                    BufferManager::GetInstance().PasteAllArtboards();
+                    ClipboardPastePlugin::GetInstance().UpdateUI();
+                    return 0;
+                }
                 case IDC_BTN_CLEAR: {
                     AppContext appContext(pluginRef);
                     BufferManager::GetInstance().Clear();
@@ -369,6 +381,7 @@ static LRESULT CALLBACK PanelWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM 
                 case IDC_BTN_SETTINGS: {
                     if (ConfigManager::GetInstance().ShowSettingsDialog(hwnd)) {
                         ClipboardPastePlugin::GetInstance().UpdateButtonsText();
+                        ClipboardPastePlugin::GetInstance().UpdateUI();
                     }
                     return 0;
                 }
@@ -443,6 +456,7 @@ static LRESULT CALLBACK PanelWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM 
             g_hBtnCopy = NULL;
             g_hBtnPasteInPlace = NULL;
             g_hBtnPasteCenter = NULL;
+            g_hBtnPasteAllArtboards = NULL;
             g_hBtnClear = NULL;
             g_hBtnSettings = NULL;
             g_hStaticStatus = NULL;
@@ -459,7 +473,7 @@ static LRESULT CALLBACK PanelWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM 
 
 static LRESULT CALLBACK KeyboardHookProc(int nCode, WPARAM wParam, LPARAM lParam) {
     if (nCode >= 0 && wParam == PM_REMOVE) {
-        if (ConfigManager::GetInstance().IsDialogActive()) {
+        if (ConfigManager::GetInstance().IsDialogActive() || ConfigManager::GetInstance().IsPluginDisabled()) {
             return CallNextHookEx(g_hKeyHook, nCode, wParam, lParam);
         }
         MSG* pMsg = reinterpret_cast<MSG*>(lParam);
@@ -500,6 +514,14 @@ static LRESULT CALLBACK KeyboardHookProc(int nCode, WPARAM wParam, LPARAM lParam
                     ClipboardPastePlugin::GetInstance().UpdateUI();
                     pMsg->message = WM_NULL;
                     return 1;
+                } else if (cfg.MatchHotkey(cfg.GetPasteAllArtboardsHotkey(), vk, mod)) {
+                    SPPluginRef pluginRef = ClipboardPastePlugin::GetInstance().GetPluginRef();
+                    AppContext appContext(pluginRef);
+                    PluginLog("[HotKey Hook] Intercepted PasteAllArtboards Hotkey -> PasteAllArtboards()");
+                    BufferManager::GetInstance().PasteAllArtboards();
+                    ClipboardPastePlugin::GetInstance().UpdateUI();
+                    pMsg->message = WM_NULL;
+                    return 1;
                 }
             }
         }
@@ -521,6 +543,7 @@ ClipboardPastePlugin::ClipboardPastePlugin()
       m_hMenuCopy(nullptr),
       m_hMenuPasteInPlace(nullptr),
       m_hMenuPasteCenter(nullptr),
+      m_hMenuPasteAllArtboards(nullptr),
       m_hMenuClear(nullptr),
       m_hMenuAbout(nullptr) {}
 
@@ -628,8 +651,8 @@ SPErr ClipboardPastePlugin::CreateDockablePanel() {
 
     AISize minS = { 100, 100 };
     AISize maxS = { 1200, 1200 };
-    AISize prefConstS = { 190, 235 };
-    AISize prefUnconstS = { 210, 240 };
+    AISize prefConstS = { 190, 265 };
+    AISize prefUnconstS = { 210, 270 };
     sAIPanel->SetSizes(m_panelRef, minS, prefUnconstS, prefConstS, maxS);
 
     // Set panel dock SVG icon (light & dark theme)
@@ -694,37 +717,43 @@ SPErr ClipboardPastePlugin::CreateDockablePanel() {
             WS_VISIBLE | WS_CHILD | BS_PUSHBUTTON,
             10, 89, 220, 26, m_hPanelDlg, (HMENU)IDC_BTN_PASTE_CENTER, hInst, NULL);
 
+        g_hBtnPasteAllArtboards = CreateWindowExA(
+            0, "BUTTON", "Paste to All Artboards (F8)",
+            WS_VISIBLE | WS_CHILD | BS_PUSHBUTTON,
+            10, 119, 220, 26, m_hPanelDlg, (HMENU)IDC_BTN_PASTE_ALL_ARTBOARDS, hInst, NULL);
+
         g_hBtnClear = CreateWindowExA(
             0, "BUTTON", "Clear Buffer",
             WS_VISIBLE | WS_CHILD | BS_PUSHBUTTON,
-            10, 120, 100, 24, m_hPanelDlg, (HMENU)IDC_BTN_CLEAR, hInst, NULL);
+            10, 150, 100, 24, m_hPanelDlg, (HMENU)IDC_BTN_CLEAR, hInst, NULL);
 
         g_hBtnSettings = CreateWindowExA(
             0, "BUTTON", "Settings...",
             WS_VISIBLE | WS_CHILD | BS_PUSHBUTTON,
-            120, 120, 100, 24, m_hPanelDlg, (HMENU)IDC_BTN_SETTINGS, hInst, NULL);
+            120, 150, 100, 24, m_hPanelDlg, (HMENU)IDC_BTN_SETTINGS, hInst, NULL);
 
         g_hStaticStatus = CreateWindowExA(
             0, "STATIC", "Buffer Status: Empty\n(No selection copied)",
             WS_VISIBLE | WS_CHILD | SS_LEFT,
-            10, 149, 220, 34, m_hPanelDlg, (HMENU)IDC_STATIC_STATUS, hInst, NULL);
+            10, 179, 220, 34, m_hPanelDlg, (HMENU)IDC_STATIC_STATUS, hInst, NULL);
 
         // Footer links: single line, no word wrap, end ellipsis, clickable
         g_hStaticLinkAuthor = CreateWindowExA(
             0, "STATIC", "github.com/SaidAuita/AI-Clipboard-Paste",
             WS_VISIBLE | WS_CHILD | SS_LEFTNOWORDWRAP | SS_ENDELLIPSIS | SS_NOTIFY,
-            10, 189, 220, 18, m_hPanelDlg, (HMENU)IDC_STATIC_LINK_AUTHOR, hInst, NULL);
+            10, 219, 220, 18, m_hPanelDlg, (HMENU)IDC_STATIC_LINK_AUTHOR, hInst, NULL);
 
         g_hStaticLinkTools = CreateWindowExA(
             0, "STATIC", "More scripts: ph-cu-s.com/tools",
             WS_VISIBLE | WS_CHILD | SS_LEFTNOWORDWRAP | SS_ENDELLIPSIS | SS_NOTIFY,
-            10, 209, 220, 18, m_hPanelDlg, (HMENU)IDC_STATIC_LINK_TOOLS, hInst, NULL);
+            10, 239, 220, 18, m_hPanelDlg, (HMENU)IDC_STATIC_LINK_TOOLS, hInst, NULL);
 
         SendMessage(g_hStaticHeaderTitle, WM_SETFONT, (WPARAM)g_hHeaderFont, TRUE);
         SendMessage(g_hStaticHeaderVersion, WM_SETFONT, (WPARAM)g_hFooterFont, TRUE);
         SendMessage(g_hBtnCopy, WM_SETFONT, (WPARAM)g_hUIFont, TRUE);
         SendMessage(g_hBtnPasteInPlace, WM_SETFONT, (WPARAM)g_hUIFont, TRUE);
         SendMessage(g_hBtnPasteCenter, WM_SETFONT, (WPARAM)g_hUIFont, TRUE);
+        SendMessage(g_hBtnPasteAllArtboards, WM_SETFONT, (WPARAM)g_hUIFont, TRUE);
         SendMessage(g_hBtnClear, WM_SETFONT, (WPARAM)g_hUIFont, TRUE);
         SendMessage(g_hBtnSettings, WM_SETFONT, (WPARAM)g_hUIFont, TRUE);
         SendMessage(g_hStaticStatus, WM_SETFONT, (WPARAM)g_hUIFont, TRUE);
@@ -736,6 +765,7 @@ SPErr ClipboardPastePlugin::CreateDockablePanel() {
         SetWindowLongPtr(g_hBtnCopy, GWLP_WNDPROC, (LONG_PTR)CustomButtonProc);
         SetWindowLongPtr(g_hBtnPasteInPlace, GWLP_WNDPROC, (LONG_PTR)CustomButtonProc);
         SetWindowLongPtr(g_hBtnPasteCenter, GWLP_WNDPROC, (LONG_PTR)CustomButtonProc);
+        SetWindowLongPtr(g_hBtnPasteAllArtboards, GWLP_WNDPROC, (LONG_PTR)CustomButtonProc);
         SetWindowLongPtr(g_hBtnClear, GWLP_WNDPROC, (LONG_PTR)CustomButtonProc);
         SetWindowLongPtr(g_hBtnSettings, GWLP_WNDPROC, (LONG_PTR)CustomButtonProc);
 
@@ -790,6 +820,11 @@ SPErr ClipboardPastePlugin::AddMenuItems() {
     pasteCenterData.itemText = ai::UnicodeString("Paste to Center of View\tF7");
     sAIMenu->AddMenuItem(m_pluginRef, "ClipboardPasteCenterKey", &pasteCenterData, kMenuItemNoOptions, &m_hMenuPasteCenter);
 
+    AIPlatformAddMenuItemDataUS pasteAllData;
+    pasteAllData.groupName = kPasteUtilsMenuGroup;
+    pasteAllData.itemText = ai::UnicodeString("Paste on All Artboards\tF8");
+    sAIMenu->AddMenuItem(m_pluginRef, "ClipboardPasteAllArtboardsKey", &pasteAllData, kMenuItemNoOptions, &m_hMenuPasteAllArtboards);
+
     AIPlatformAddMenuItemDataUS clearData;
     clearData.groupName = kPasteUtilsMenuGroup;
     clearData.itemText = ai::UnicodeString("Clear In-Memory Buffer");
@@ -808,11 +843,20 @@ void ClipboardPastePlugin::UpdateUI() {
     if (!g_hStaticStatus) return;
 
     char text[256];
-    if (BufferManager::GetInstance().HasData()) {
-        std::snprintf(text, sizeof(text), "Buffer Status: Ready\n(%zu item(s) stored)",
-                      BufferManager::GetInstance().GetItemCount());
+    if (ConfigManager::GetInstance().IsPluginDisabled()) {
+        if (BufferManager::GetInstance().HasData()) {
+            std::snprintf(text, sizeof(text), "Status: Disabled (Hotkeys off)\n(%zu item(s) in buffer)",
+                          BufferManager::GetInstance().GetItemCount());
+        } else {
+            std::snprintf(text, sizeof(text), "Status: Disabled (Hotkeys off)\n(Buffer is empty)");
+        }
     } else {
-        std::snprintf(text, sizeof(text), "Buffer Status: Empty\n(No selection copied)");
+        if (BufferManager::GetInstance().HasData()) {
+            std::snprintf(text, sizeof(text), "Buffer Status: Ready\n(%zu item(s) stored)",
+                          BufferManager::GetInstance().GetItemCount());
+        } else {
+            std::snprintf(text, sizeof(text), "Buffer Status: Empty\n(No selection copied)");
+        }
     }
     SetWindowTextA(g_hStaticStatus, text);
     if (g_hStaticStatus) {
@@ -822,24 +866,32 @@ void ClipboardPastePlugin::UpdateUI() {
 
 void ClipboardPastePlugin::UpdateButtonsText() {
     auto& cfg = ConfigManager::GetInstance();
+    bool disabled = cfg.IsPluginDisabled();
+
     std::string copyHk = cfg.GetHotkeyDisplayString(cfg.GetCopyHotkey());
     std::string placeHk = cfg.GetHotkeyDisplayString(cfg.GetPastePlaceHotkey());
     std::string centerHk = cfg.GetHotkeyDisplayString(cfg.GetPasteCenterHotkey());
+    std::string allHk = cfg.GetHotkeyDisplayString(cfg.GetPasteAllArtboardsHotkey());
 
     if (g_hBtnCopy) {
-        std::string text = "Copy to Buffer (" + copyHk + ")";
+        std::string text = disabled ? "Copy to Buffer (Off)" : ("Copy to Buffer (" + copyHk + ")");
         SetWindowTextA(g_hBtnCopy, text.c_str());
         InvalidateRect(g_hBtnCopy, NULL, FALSE);
     }
     if (g_hBtnPasteInPlace) {
-        std::string text = "Paste In Place (" + placeHk + ")";
+        std::string text = disabled ? "Paste In Place (Off)" : ("Paste In Place (" + placeHk + ")");
         SetWindowTextA(g_hBtnPasteInPlace, text.c_str());
         InvalidateRect(g_hBtnPasteInPlace, NULL, FALSE);
     }
     if (g_hBtnPasteCenter) {
-        std::string text = "Paste to Center (" + centerHk + ")";
+        std::string text = disabled ? "Paste to Center (Off)" : ("Paste to Center (" + centerHk + ")");
         SetWindowTextA(g_hBtnPasteCenter, text.c_str());
         InvalidateRect(g_hBtnPasteCenter, NULL, FALSE);
+    }
+    if (g_hBtnPasteAllArtboards) {
+        std::string text = disabled ? "Paste to All Artboards (Off)" : ("Paste to All Artboards (" + allHk + ")");
+        SetWindowTextA(g_hBtnPasteAllArtboards, text.c_str());
+        InvalidateRect(g_hBtnPasteAllArtboards, NULL, FALSE);
     }
 }
 
@@ -864,18 +916,22 @@ SPErr ClipboardPastePlugin::GoMenuItem(void* message) {
     } else if (item == m_hMenuPasteCenter) {
         BufferManager::GetInstance().PasteCenter();
         UpdateUI();
+    } else if (item == m_hMenuPasteAllArtboards) {
+        BufferManager::GetInstance().PasteAllArtboards();
+        UpdateUI();
     } else if (item == m_hMenuClear) {
         BufferManager::GetInstance().Clear();
         UpdateUI();
     } else if (item == m_hMenuAbout) {
         MessageBoxA(NULL,
-            "Clipboard Paste Native Plugin v1.0.0 (x64)\n\n"
+            "Clipboard Paste Native Plugin v1.17 (x64)\n\n"
             "High-performance native C++ dockable palette for Adobe Illustrator.\n"
             "Completely bypasses the broken Windows OLE clipboard.\n\n"
             "Shortcuts:\n"
             " - F5: In-Place Copy to Buffer\n"
             " - F6: In-Place Paste\n"
-            " - F7: Paste to Center of Artboard\n\n"
+            " - F7: Paste to Center of View\n"
+            " - F8: Paste on All Artboards\n\n"
             "Author: SaidAuita (ph-cu-s.com/tools)",
             "About Clipboard Paste", MB_OK | MB_ICONINFORMATION);
     }

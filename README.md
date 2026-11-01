@@ -2,11 +2,11 @@
 
 <p align="center">
   <b>Instant, rock-solid vector duplication in Adobe Illustrator — completely bypassing the broken Windows OLE clipboard.</b><br>
-  <i>100% Vector Fidelity • In-Place Alignment • Global Hotkeys (F5 / F6 / F7) • 8 UI Languages</i>
+  <i>100% Vector Fidelity • In-Place Alignment • Global Hotkeys (F5 / F6 / F7 / F8) • 8 UI Languages</i>
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Native%20Plugin-v1.15%20(Recommended)-brightgreen.svg?style=flat-square" alt="Native Plugin v1.15">
+  <img src="https://img.shields.io/badge/Native%20Plugin-v1.17%20(Recommended)-brightgreen.svg?style=flat-square" alt="Native Plugin v1.17">
   <img src="https://img.shields.io/badge/CEP%20Extension-v1.0.12-blue.svg?style=flat-square" alt="CEP Version v1.0.12">
   <img src="https://img.shields.io/badge/Adobe%20Illustrator-2020--2026%2B-orange.svg?style=flat-square" alt="Illustrator Compatibility">
   <img src="https://img.shields.io/badge/Platform-Windows%20x64%20%7C%20macOS-lightgrey.svg?style=flat-square" alt="OS Support">
@@ -15,7 +15,7 @@
 
 <p align="center">
   *( 🇬🇧 <a href="#english"><b>English</b></a> | 🇷🇺 <a href="#русский"><b>Русский</b></a> )* &nbsp;•&nbsp; 
-  <a href="https://github.com/SaidAuita/AI-Clipboard-Paste/releases/download/v1.15/Clipboard_Paste_Plugin_v1.15.zip"><b>⚡ Download Native Plugin v1.15 (.zip)</b></a> &nbsp;•&nbsp; 
+  <a href="https://github.com/SaidAuita/AI-Clipboard-Paste/releases/download/v1.17/Clipboard_Paste_Plugin_v1.17.zip"><b>⚡ Download Native Plugin v1.17 (.zip)</b></a> &nbsp;•&nbsp; 
   <a href="https://github.com/SaidAuita/AI-Clipboard-Paste/releases"><b>📦 All Releases</b></a>
 </p>
 
@@ -25,12 +25,13 @@
 ## 🇬🇧 English
 
 > [!IMPORTANT]
-> ### 📢 Update v1.15: Completely Silent Operation (Beep Sound Removed)
-> **If you downloaded earlier builds (v1.12–v1.14):** Please update to **v1.15**!  
-> In previous builds, an internal debug signal (`MessageBeep`) was unintentionally left in the copy and paste routines. While inaudible on desktop setups without sound, on laptops and PCs with active speakers Windows played a default system notification sound on every copy and paste.  
-> In **v1.15**, this has been completely removed. The plugin now operates **100% silently**, just like native Illustrator shortcuts.  
+> ### 📢 Update v1.17: Disable Plugin Option & Paste on All Artboards (F8)
+> - **Disable Plugin (Ignore Hotkeys) Option:** In the **Settings...** dialog, you can now toggle `Disable plugin (ignore hotkeys)`. When active, the plugin completely stops intercepting keyboard shortcuts (`F5`, `F6`, `F7`, `F8`), letting Illustrator process native hotkeys uninterrupted. By default upon installation, the plugin is active/enabled (`Disabled=0`).
+> - **Paste on All Artboards (`F8`):** Instantly duplicate artwork across all artboards in the document with in-place coordinate alignment.
+> - **Completely Silent Operation:** Zero system beep sounds (`MessageBeep` removed).
+> - **Adaptive Spectrum Theme & Clear Status:** Clear indicator on panel (`Status: Disabled (Hotkeys off)`) and button labels (`(Off)`).
 > 
-> 📥 **Download Native Plugin Installer:** [**Clipboard_Paste_Plugin_v1.15.zip**](https://github.com/SaidAuita/AI-Clipboard-Paste/releases/download/v1.15/Clipboard_Paste_Plugin_v1.15.zip) *(Release: [v1.15](https://github.com/SaidAuita/AI-Clipboard-Paste/releases/tag/v1.15))*
+> 📥 **Download Native Plugin Installer:** [**Clipboard_Paste_Plugin_v1.17.zip**](https://github.com/SaidAuita/AI-Clipboard-Paste/releases/download/v1.17/Clipboard_Paste_Plugin_v1.17.zip) *(Release: [v1.17](https://github.com/SaidAuita/AI-Clipboard-Paste/releases/tag/v1.17))*
 
 ### ⚡ The Core Problem: Illustrator Clipboard Failure
 
@@ -290,12 +291,13 @@ Run `Uninstall.bat` to cleanly remove the extension from Adobe CEP without affec
 ## 🇷🇺 Русский
 
 > [!IMPORTANT]
-> ### 📢 Обновление v1.15: Полностью бесшумная работа (Звуковой сигнал убран)
-> **Если вы скачивали плагин ранее (версии v1.12–v1.14):** обязательно обновитесь до **v1.15**!  
-> В ранних сборках в процедурах копирования и вставки оставался тестовый отладочный вызов `MessageBeep(MB_OK)`. Из-за этого на ноутбуках и компьютерах со стандартной звуковой схемой Windows при каждом копировании и каждой вставке раздавался навязчивый системный звук («Default Beep» / фоновый звук Windows).  
-> В версии **v1.15** этот вызов полностью удален. Теперь плагин работает **абсолютно бесшумно**, как стандартный буфер Illustrator.  
+> ### 📢 Обновление v1.17: Опция отключения плагина и вставка на все артборды (F8)
+> - **Чекбокс отключения плагина и горячих клавиш:** В диалоге настроек (**Settings...**) добавлен чекбокс `Disable plugin (ignore hotkeys)`. При его активации плагин полностью отключает перехват клавиш (`F5`, `F6`, `F7`, `F8`), передавая управление стандартным функциям Illustrator. По умолчанию при установке плагин включен (`Disabled=0`).
+> - **Вставка на все артборды (`F8`):** Быстрое дублирование выделения сразу на все монтажные области активного документа.
+> - **Полностью бесшумная работа:** Отсутствуют системные звуки при копировании и вставке.
+> - **Наглядная индикация статуса:** На карточке буфера отображается `Status: Disabled (Hotkeys off)`, а на кнопках — отметка `(Off)`.
 > 
-> 📥 **Скачать установщик нативного плагина:** [**Clipboard_Paste_Plugin_v1.15.zip**](https://github.com/SaidAuita/AI-Clipboard-Paste/releases/download/v1.15/Clipboard_Paste_Plugin_v1.15.zip) *(Страница релиза: [Релиз v1.15](https://github.com/SaidAuita/AI-Clipboard-Paste/releases/tag/v1.15))*
+> 📥 **Скачать установщик нативного плагина:** [**Clipboard_Paste_Plugin_v1.17.zip**](https://github.com/SaidAuita/AI-Clipboard-Paste/releases/download/v1.17/Clipboard_Paste_Plugin_v1.17.zip) *(Страница релиза: [Релиз v1.17](https://github.com/SaidAuita/AI-Clipboard-Paste/releases/tag/v1.17))*
 
 ### ⚡ Проблема: отвал буфера обмена в Illustrator при активной работе
 

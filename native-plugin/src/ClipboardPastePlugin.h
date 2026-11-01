@@ -42,6 +42,7 @@ private:
     AIMenuItemHandle  m_hMenuCopy;
     AIMenuItemHandle  m_hMenuPasteInPlace;
     AIMenuItemHandle  m_hMenuPasteCenter;
+    AIMenuItemHandle  m_hMenuPasteAllArtboards;
     AIMenuItemHandle  m_hMenuClear;
     AIMenuItemHandle  m_hMenuAbout;
 };

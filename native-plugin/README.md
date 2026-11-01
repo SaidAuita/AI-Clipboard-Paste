@@ -7,7 +7,9 @@
 High-speed native C++ vector duplicator plugin for **Adobe Illustrator 2020 – 2026+**.
 
 ## 🚀 Key Advantages Over CEP Extension
-- **Global Hotkeys Out of the Box:** Configurable hotkeys (`F5`, `F6`, `F7` or custom combinations) work instantly via thread-level Windows hooks. No panel clicking or focus switches required.
+- **Global Hotkeys Out of the Box:** Configurable hotkeys (`F5`, `F6`, `F7`, `F8` or custom combinations) work instantly via thread-level Windows hooks. No panel clicking or focus switches required.
+- **Hotkey Disable Toggle:** Dedicated option in **Settings...** (`Disable plugin (ignore hotkeys)`) to temporarily disable hotkey interception and return full key control to Illustrator.
+- **Paste on All Artboards (`F8`):** Instantly clone artwork to all artboards with in-place alignment.
 - **No Flashing Helper Panels:** Unlike CEP extensions that rely on auxiliary micro-panels to trigger hotkeys, the native plugin operates purely inside the Illustrator process with zero visual disruption.
 - **Pixel-Perfect Native UI:** Fully custom-rendered dockable palette matching Illustrator's Spectrum UI (both dark and light themes, including automatic adaptation when brightness changes).
 - **Direct Memory DOM Execution:** Deep duplication (`sAIArt->DuplicateArt`) takes <1 ms without Windows OLE serialization.

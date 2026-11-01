@@ -48,10 +48,11 @@ ConfigManager& ConfigManager::GetInstance() {
 }
 
 ConfigManager::ConfigManager() {
-    // Defaults: F5 = Copy, F6 = Paste in Place, F7 = Paste Center of View
+    // Defaults: F5 = Copy, F6 = Paste in Place, F7 = Paste Center, F8 = Paste All Artboards
     m_copyHotkey = { VK_F5, 0 };
     m_pastePlaceHotkey = { VK_F6, 0 };
     m_pasteCenterHotkey = { VK_F7, 0 };
+    m_pasteAllArtboardsHotkey = { VK_F8, 0 };
 
     Load();
 }
@@ -78,7 +79,12 @@ void ConfigManager::Load() {
     m_pasteCenterHotkey.vkCode = (UINT)GetPrivateProfileIntA("Hotkeys", "PasteCenter_VK", VK_F7, ini.c_str());
     m_pasteCenterHotkey.modifiers = (UINT)GetPrivateProfileIntA("Hotkeys", "PasteCenter_Mod", 0, ini.c_str());
 
+    m_pasteAllArtboardsHotkey.vkCode = (UINT)GetPrivateProfileIntA("Hotkeys", "PasteAllArtboards_VK", VK_F8, ini.c_str());
+    m_pasteAllArtboardsHotkey.modifiers = (UINT)GetPrivateProfileIntA("Hotkeys", "PasteAllArtboards_Mod", 0, ini.c_str());
+
     m_selectAfterPaste = (GetPrivateProfileIntA("General", "SelectAfterPaste", 1, ini.c_str()) != 0);
+    m_disabled = (GetPrivateProfileIntA("General", "Disabled", 0, ini.c_str()) != 0) ||
+                 (GetPrivateProfileIntA("General", "DisablePlugin", 0, ini.c_str()) != 0);
 }
 
 void ConfigManager::Save() {
@@ -93,7 +99,12 @@ void ConfigManager::Save() {
     WritePrivateProfileStringA("Hotkeys", "PasteCenter_VK", std::to_string(m_pasteCenterHotkey.vkCode).c_str(), ini.c_str());
     WritePrivateProfileStringA("Hotkeys", "PasteCenter_Mod", std::to_string(m_pasteCenterHotkey.modifiers).c_str(), ini.c_str());
 
+    WritePrivateProfileStringA("Hotkeys", "PasteAllArtboards_VK", std::to_string(m_pasteAllArtboardsHotkey.vkCode).c_str(), ini.c_str());
+    WritePrivateProfileStringA("Hotkeys", "PasteAllArtboards_Mod", std::to_string(m_pasteAllArtboardsHotkey.modifiers).c_str(), ini.c_str());
+
     WritePrivateProfileStringA("General", "SelectAfterPaste", m_selectAfterPaste ? "1" : "0", ini.c_str());
+    WritePrivateProfileStringA("General", "Disabled", m_disabled ? "1" : "0", ini.c_str());
+    WritePrivateProfileStringA("General", "DisablePlugin", m_disabled ? "1" : "0", ini.c_str());
 }
 
 std::string ConfigManager::GetHotkeyDisplayString(const HotkeyConfig& hk) {
@@ -127,16 +138,21 @@ bool ConfigManager::MatchHotkey(const HotkeyConfig& hk, UINT vkCode, UINT curren
 #define IDC_KEY_PLACE       204
 #define IDC_MOD_CENTER      205
 #define IDC_KEY_CENTER      206
+#define IDC_MOD_ALL         211
+#define IDC_KEY_ALL         212
 #define IDC_BTN_OK          207
 #define IDC_BTN_CANCEL      208
 #define IDC_BTN_DEFAULTS    209
 #define IDC_CHK_SELECT      210
+#define IDC_CHK_DISABLE     213
 
 struct DialogData {
     HotkeyConfig copyHk;
     HotkeyConfig placeHk;
     HotkeyConfig centerHk;
+    HotkeyConfig allHk;
     bool selectAfterPaste;
+    bool disabled;
     bool saved;
 };
 
@@ -151,9 +167,11 @@ static void PopulateCombos(HWND hDlg) {
     HWND hKeyPlace  = GetDlgItem(hDlg, IDC_KEY_PLACE);
     HWND hModCenter = GetDlgItem(hDlg, IDC_MOD_CENTER);
     HWND hKeyCenter = GetDlgItem(hDlg, IDC_KEY_CENTER);
+    HWND hModAll    = GetDlgItem(hDlg, IDC_MOD_ALL);
+    HWND hKeyAll    = GetDlgItem(hDlg, IDC_KEY_ALL);
 
-    HWND modCombos[] = { hModCopy, hModPlace, hModCenter };
-    HWND keyCombos[] = { hKeyCopy, hKeyPlace, hKeyCenter };
+    HWND modCombos[] = { hModCopy, hModPlace, hModCenter, hModAll };
+    HWND keyCombos[] = { hKeyCopy, hKeyPlace, hKeyCenter, hKeyAll };
 
     for (HWND mc : modCombos) {
         SendMessage(mc, CB_RESETCONTENT, 0, 0);
@@ -198,7 +216,11 @@ static void PopulateCombos(HWND hDlg) {
     selectMod(hModCenter, g_dlgData.centerHk.modifiers);
     selectKey(hKeyCenter, g_dlgData.centerHk.vkCode);
 
+    selectMod(hModAll, g_dlgData.allHk.modifiers);
+    selectKey(hKeyAll, g_dlgData.allHk.vkCode);
+
     CheckDlgButton(hDlg, IDC_CHK_SELECT, g_dlgData.selectAfterPaste ? BST_CHECKED : BST_UNCHECKED);
+    CheckDlgButton(hDlg, IDC_CHK_DISABLE, g_dlgData.disabled ? BST_CHECKED : BST_UNCHECKED);
 }
 
 static LRESULT CALLBACK SettingsDlgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
@@ -249,7 +271,19 @@ static LRESULT CALLBACK SettingsDlgProc(HWND hwnd, UINT msg, WPARAM wParam, LPAR
                     g_dlgData.centerHk.vkCode = g_supportedKeys[idxKeyCenter].vk;
                 }
 
+                HWND hModAll = GetDlgItem(hwnd, IDC_MOD_ALL);
+                HWND hKeyAll = GetDlgItem(hwnd, IDC_KEY_ALL);
+                int idxModAll = (int)SendMessage(hModAll, CB_GETCURSEL, 0, 0);
+                int idxKeyAll = (int)SendMessage(hKeyAll, CB_GETCURSEL, 0, 0);
+                if (idxModAll >= 0 && idxModAll < (int)(sizeof(g_supportedMods) / sizeof(g_supportedMods[0]))) {
+                    g_dlgData.allHk.modifiers = g_supportedMods[idxModAll].mod;
+                }
+                if (idxKeyAll >= 0 && idxKeyAll < (int)(sizeof(g_supportedKeys) / sizeof(g_supportedKeys[0]))) {
+                    g_dlgData.allHk.vkCode = g_supportedKeys[idxKeyAll].vk;
+                }
+
                 g_dlgData.selectAfterPaste = (IsDlgButtonChecked(hwnd, IDC_CHK_SELECT) == BST_CHECKED);
+                g_dlgData.disabled = (IsDlgButtonChecked(hwnd, IDC_CHK_DISABLE) == BST_CHECKED);
 
                 g_dlgData.saved = true;
                 g_dialogRunning = false;
@@ -264,7 +298,9 @@ static LRESULT CALLBACK SettingsDlgProc(HWND hwnd, UINT msg, WPARAM wParam, LPAR
                 g_dlgData.copyHk = { VK_F5, 0 };
                 g_dlgData.placeHk = { VK_F6, 0 };
                 g_dlgData.centerHk = { VK_F7, 0 };
+                g_dlgData.allHk = { VK_F8, 0 };
                 g_dlgData.selectAfterPaste = true;
+                g_dlgData.disabled = false;
                 PopulateCombos(hwnd);
                 return 0;
             }
@@ -302,7 +338,9 @@ bool ConfigManager::ShowSettingsDialog(HWND parentHwnd) {
     g_dlgData.copyHk = m_copyHotkey;
     g_dlgData.placeHk = m_pastePlaceHotkey;
     g_dlgData.centerHk = m_pasteCenterHotkey;
+    g_dlgData.allHk = m_pasteAllArtboardsHotkey;
     g_dlgData.selectAfterPaste = m_selectAfterPaste;
+    g_dlgData.disabled = m_disabled;
     g_dlgData.saved = false;
 
     // Resolve top-level parent window for true modality
@@ -322,7 +360,7 @@ bool ConfigManager::ShowSettingsDialog(HWND parentHwnd) {
         GetWindowRect(GetDesktopWindow(), &rcParent);
     }
     int dlgW = 440;
-    int dlgH = 265;
+    int dlgH = 330;
     int x = rcParent.left + ((rcParent.right - rcParent.left) - dlgW) / 2;
     int y = rcParent.top + ((rcParent.bottom - rcParent.top) - dlgH) / 2;
 
@@ -356,34 +394,46 @@ bool ConfigManager::ShowSettingsDialog(HWND parentHwnd) {
                                     308, 42, 96, 180, hDlg, (HMENU)IDC_KEY_COPY, hInst, NULL);
 
     // Row 2: Paste Place
-    addLabel("2. Paste in Place:", 18, 78, 160, 22);
+    addLabel("2. Paste in Place:", 18, 76, 160, 22);
     HWND hModPlace = CreateWindowExA(0, "COMBOBOX", "", WS_CHILD | WS_VISIBLE | CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP,
-                                     184, 76, 116, 180, hDlg, (HMENU)IDC_MOD_PLACE, hInst, NULL);
+                                     184, 74, 116, 180, hDlg, (HMENU)IDC_MOD_PLACE, hInst, NULL);
     HWND hKeyPlace = CreateWindowExA(0, "COMBOBOX", "", WS_CHILD | WS_VISIBLE | CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP,
-                                     308, 76, 96, 180, hDlg, (HMENU)IDC_KEY_PLACE, hInst, NULL);
+                                     308, 74, 96, 180, hDlg, (HMENU)IDC_KEY_PLACE, hInst, NULL);
 
     // Row 3: Paste Center
-    addLabel("3. Paste Center of View:", 18, 112, 160, 22);
+    addLabel("3. Paste to Center:", 18, 108, 160, 22);
     HWND hModCenter = CreateWindowExA(0, "COMBOBOX", "", WS_CHILD | WS_VISIBLE | CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP,
-                                      184, 110, 116, 180, hDlg, (HMENU)IDC_MOD_CENTER, hInst, NULL);
+                                      184, 106, 116, 180, hDlg, (HMENU)IDC_MOD_CENTER, hInst, NULL);
     HWND hKeyCenter = CreateWindowExA(0, "COMBOBOX", "", WS_CHILD | WS_VISIBLE | CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP,
-                                      308, 110, 96, 180, hDlg, (HMENU)IDC_KEY_CENTER, hInst, NULL);
+                                      308, 106, 96, 180, hDlg, (HMENU)IDC_KEY_CENTER, hInst, NULL);
 
-    // Checkbox: Select object(s) after paste
+    // Row 4: Paste on All Artboards
+    addLabel("4. Paste on All Artboards:", 18, 140, 160, 22);
+    HWND hModAll = CreateWindowExA(0, "COMBOBOX", "", WS_CHILD | WS_VISIBLE | CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP,
+                                   184, 138, 116, 180, hDlg, (HMENU)IDC_MOD_ALL, hInst, NULL);
+    HWND hKeyAll = CreateWindowExA(0, "COMBOBOX", "", WS_CHILD | WS_VISIBLE | CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP,
+                                   308, 138, 96, 180, hDlg, (HMENU)IDC_KEY_ALL, hInst, NULL);
+
+    // Checkbox 1: Select object(s) after paste
     HWND hChkSelect = CreateWindowExA(0, "BUTTON", "Select object(s) after paste",
                                       WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX | WS_TABSTOP,
-                                      18, 144, 380, 22, hDlg, (HMENU)IDC_CHK_SELECT, hInst, NULL);
+                                      18, 170, 380, 20, hDlg, (HMENU)IDC_CHK_SELECT, hInst, NULL);
+
+    // Checkbox 2: Disable plugin (ignore hotkeys)
+    HWND hChkDisable = CreateWindowExA(0, "BUTTON", "Disable plugin (ignore hotkeys)",
+                                       WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX | WS_TABSTOP,
+                                       18, 195, 380, 20, hDlg, (HMENU)IDC_CHK_DISABLE, hInst, NULL);
 
     // Bottom buttons (strictly in English)
     HWND hBtnDefaults = CreateWindowExA(0, "BUTTON", "Defaults", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON | WS_TABSTOP,
-                                        18, 180, 90, 28, hDlg, (HMENU)IDC_BTN_DEFAULTS, hInst, NULL);
+                                        18, 230, 90, 28, hDlg, (HMENU)IDC_BTN_DEFAULTS, hInst, NULL);
     HWND hBtnOk = CreateWindowExA(0, "BUTTON", "Save", WS_CHILD | WS_VISIBLE | BS_DEFPUSHBUTTON | WS_TABSTOP,
-                                  228, 180, 88, 28, hDlg, (HMENU)IDC_BTN_OK, hInst, NULL);
+                                  228, 230, 88, 28, hDlg, (HMENU)IDC_BTN_OK, hInst, NULL);
     HWND hBtnCancel = CreateWindowExA(0, "BUTTON", "Cancel", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON | WS_TABSTOP,
-                                      324, 180, 80, 28, hDlg, (HMENU)IDC_BTN_CANCEL, hInst, NULL);
+                                      324, 230, 80, 28, hDlg, (HMENU)IDC_BTN_CANCEL, hInst, NULL);
 
     HWND allControls[] = { hModCopy, hKeyCopy, hModPlace, hKeyPlace, hModCenter, hKeyCenter,
-                           hChkSelect, hBtnDefaults, hBtnOk, hBtnCancel };
+                           hModAll, hKeyAll, hChkSelect, hChkDisable, hBtnDefaults, hBtnOk, hBtnCancel };
     for (HWND c : allControls) {
         SendMessage(c, WM_SETFONT, (WPARAM)hFont, TRUE);
     }
@@ -439,7 +489,9 @@ bool ConfigManager::ShowSettingsDialog(HWND parentHwnd) {
         m_copyHotkey = g_dlgData.copyHk;
         m_pastePlaceHotkey = g_dlgData.placeHk;
         m_pasteCenterHotkey = g_dlgData.centerHk;
+        m_pasteAllArtboardsHotkey = g_dlgData.allHk;
         m_selectAfterPaste = g_dlgData.selectAfterPaste;
+        m_disabled = g_dlgData.disabled;
         Save();
         return true;
     }

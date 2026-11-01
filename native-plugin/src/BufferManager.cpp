@@ -244,6 +244,35 @@ bool BufferManager::CopySelection() {
             sAIArtboard->GetPosition(props, m_sourceArtboardBounds);
         }
         sAIArtboard->Dispose(props);
+
+        // Проверяем, действительно ли центр выделенных объектов лежит в границах активного артборда.
+        // Если пользователь выделил объект на другом артборде без смены активного — ищем фактический артборд.
+        double scx = (m_sourceBounds.left + m_sourceBounds.right) / 2.0;
+        double scy = (m_sourceBounds.top + m_sourceBounds.bottom) / 2.0;
+        bool insideActive = (scx >= m_sourceArtboardBounds.left && scx <= m_sourceArtboardBounds.right &&
+                             scy <= m_sourceArtboardBounds.top && scy >= m_sourceArtboardBounds.bottom);
+        if (!insideActive) {
+            ai::ArtboardID abCount = 0;
+            if (sAIArtboard->GetCount(artboardList, abCount) == kNoErr && abCount > 1) {
+                for (ai::ArtboardID i = 0; i < abCount; ++i) {
+                    if (i == m_sourceArtboardIndex) continue;
+                    ai::ArtboardProperties p;
+                    sAIArtboard->Init(p);
+                    if (sAIArtboard->GetArtboardProperties(artboardList, i, p) == kNoErr) {
+                        AIRealRect b;
+                        sAIArtboard->GetPosition(p, b);
+                        if (scx >= b.left && scx <= b.right && scy <= b.top && scy >= b.bottom) {
+                            m_sourceArtboardIndex = i;
+                            m_sourceArtboardBounds = b;
+                            sAIArtboard->Dispose(p);
+                            PluginLog("  [CopySelection] Detected true source artboard #%d containing selection", i);
+                            break;
+                        }
+                    }
+                    sAIArtboard->Dispose(p);
+                }
+            }
+        }
         sAIArtboard->ReleaseArtboardList(artboardList);
     }
 
@@ -552,3 +581,134 @@ bool BufferManager::PasteCenter() {
               newItems.size(), dx, dy, isSameDoc);
     return true;
 }
+
+bool BufferManager::PasteAllArtboards() {
+    if (!m_hasData || m_clonedItems.empty() || !sAIArt || !sAIDocument || !sAIArtboard) {
+        PluginLog("[PasteAllArtboards FAIL] Buffer is empty or suites missing");
+        return false;
+    }
+
+    AIDocumentHandle targetDoc = nullptr;
+    AIErr targetErr = sAIDocument->GetDocument(&targetDoc);
+    if (targetErr != kNoErr || !targetDoc) {
+        PluginLog("[PasteAllArtboards FAIL] Target document error (err=%d, doc=%p)", targetErr, targetDoc);
+        return false;
+    }
+
+    if (!IsSourceDocOpen()) {
+        PluginLog("[PasteAllArtboards FAIL] Source document has been closed! Clearing buffer");
+        Clear();
+        return false;
+    }
+
+    bool isSameDoc = (targetDoc == m_sourceDoc);
+    PluginLog("[PasteAllArtboards] targetDoc=%p, sourceDoc=%p (isSameDoc=%d)", targetDoc, m_sourceDoc, isSameDoc);
+
+    ai::ArtboardList artboardList;
+    if (sAIArtboard->GetArtboardList(artboardList) != kNoErr) {
+        PluginLog("[PasteAllArtboards FAIL] GetArtboardList failed");
+        return false;
+    }
+
+    ai::ArtboardID abCount = 0;
+    sAIArtboard->GetCount(artboardList, abCount);
+    if (abCount <= 0) {
+        sAIArtboard->ReleaseArtboardList(artboardList);
+        PluginLog("[PasteAllArtboards FAIL] No artboards found in target document");
+        return false;
+    }
+
+    struct ArtboardInfo {
+        ai::ArtboardID id;
+        AIRealRect bounds;
+    };
+    std::vector<ArtboardInfo> artboards;
+    artboards.reserve(abCount);
+
+    for (ai::ArtboardID i = 0; i < abCount; ++i) {
+        ai::ArtboardProperties props;
+        sAIArtboard->Init(props);
+        if (sAIArtboard->GetArtboardProperties(artboardList, i, props) == kNoErr) {
+            AIRealRect b = {0};
+            sAIArtboard->GetPosition(props, b);
+            artboards.push_back({ i, b });
+        }
+        sAIArtboard->Dispose(props);
+    }
+    sAIArtboard->ReleaseArtboardList(artboardList);
+
+    if (artboards.empty()) {
+        PluginLog("[PasteAllArtboards FAIL] Artboard list is empty");
+        return false;
+    }
+
+    if (sAIUndo) {
+        sAIUndo->SetUndoTextUS(ai::UnicodeString("Paste on All Artboards (Buffer)"), ai::UnicodeString("Undo Paste on All Artboards"));
+    }
+
+    // Получаем группу ТЕКУЩЕГО активного слоя
+    AIArtHandle targetLayerGroup = nullptr;
+    sAIArt->GetFirstArtOfLayer(nullptr, &targetLayerGroup);
+
+    // Снимаем выделение со всех текущих объектов целевого документа
+    if (sAIMatchingArt) {
+        sAIMatchingArt->DeselectAll();
+    }
+
+    ai::CopyScope copyScope;
+    AICopyScopeKind scopeKind = isSameDoc ? kAICopyScopeForDuplicate : kAICopyScopeForRetarget;
+    copyScope.Initialize(scopeKind, std::nothrow);
+
+    AIArtHandle prevArt = nullptr;
+    std::vector<AIArtHandle> allNewItems;
+
+    // Вставляем копии на каждый артборд в то же самое место
+    for (const auto& ab : artboards) {
+        double dx = ab.bounds.left - m_sourceArtboardBounds.left;
+        double dy = ab.bounds.top - m_sourceArtboardBounds.top;
+
+        for (AIArtHandle snapshot : m_clonedItems) {
+            if (!snapshot) continue;
+            if (isSameDoc && !sAIArt->ValidArt(snapshot, true)) {
+                PluginLog("  [PasteAllArtboards] Snapshot %p is invalid in layer tree, skipping", snapshot);
+                continue;
+            }
+
+            AIArtHandle newArt = nullptr;
+            AIErr cloneErr = kNoErr;
+            if (!prevArt) {
+                if (targetLayerGroup) {
+                    cloneErr = sAIArt->DuplicateArt(snapshot, kPlaceInsideOnTop, targetLayerGroup, &newArt);
+                } else {
+                    cloneErr = sAIArt->DuplicateArt(snapshot, kPlaceAbove, snapshot, &newArt);
+                }
+            } else {
+                cloneErr = sAIArt->DuplicateArt(snapshot, kPlaceBelow, prevArt, &newArt);
+            }
+
+            if (cloneErr == kNoErr && newArt) {
+                prevArt = newArt;
+                sAIArt->SetArtUserAttr(newArt, kArtHidden, 0);
+
+                if (std::abs(dx) > 1e-6 || std::abs(dy) > 1e-6) {
+                    OffsetArt(newArt, dx, dy);
+                }
+                allNewItems.push_back(newArt);
+            } else {
+                PluginLog("  [PasteAllArtboards FAIL] DuplicateArt error %d for snapshot %p (abId=%d)", cloneErr, snapshot, ab.id);
+            }
+        }
+    }
+
+    // Применяем выделение к вставленным объектам (согласно настройкам)
+    bool selectAfter = ConfigManager::GetInstance().GetSelectAfterPaste();
+    for (AIArtHandle item : allNewItems) {
+        SelectArtRecursive(item, selectAfter);
+    }
+
+    sAIDocument->RedrawDocument();
+    PluginLog("[PasteAllArtboards SUCCESS] Duplicated %zu item(s) across %zu artboard(s) (isSameDoc=%d)",
+              allNewItems.size(), artboards.size(), isSameDoc);
+    return !allNewItems.empty();
+}
+

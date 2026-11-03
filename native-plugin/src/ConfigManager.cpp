@@ -320,6 +320,32 @@ static LRESULT CALLBACK SettingsDlgProc(HWND hwnd, UINT msg, WPARAM wParam, LPAR
     return DefWindowProcA(hwnd, msg, wParam, lParam);
 }
 
+static float GetWindowDpiScale(HWND hwnd) {
+    float scale = 1.0f;
+    if (hwnd) {
+        HMODULE hUser32 = GetModuleHandleW(L"user32.dll");
+        if (hUser32) {
+            typedef UINT (WINAPI *GetDpiForWindowProc)(HWND);
+            GetDpiForWindowProc pGetDpi = (GetDpiForWindowProc)GetProcAddress(hUser32, "GetDpiForWindow");
+            if (pGetDpi) {
+                UINT dpi = pGetDpi(hwnd);
+                if (dpi > 0) scale = (float)dpi / 96.0f;
+            }
+        }
+        if (scale <= 1.0f) {
+            HDC hdc = GetDC(hwnd);
+            if (hdc) {
+                int dpi = GetDeviceCaps(hdc, LOGPIXELSY);
+                ReleaseDC(hwnd, hdc);
+                if (dpi > 0) scale = (float)dpi / 96.0f;
+            }
+        }
+    }
+    if (scale < 0.75f) scale = 0.75f;
+    if (scale > 4.0f)  scale = 4.0f;
+    return scale;
+}
+
 bool ConfigManager::ShowSettingsDialog(HWND parentHwnd) {
     HINSTANCE hInst = GetModuleHandleA(NULL);
 
@@ -352,6 +378,18 @@ bool ConfigManager::ShowSettingsDialog(HWND parentHwnd) {
         }
     }
 
+    float scale = GetWindowDpiScale(hOwner);
+    auto S = [scale](int v) -> int { return (int)(v * scale + 0.5f); };
+
+    int clientW = S(430);
+    int clientH = S(285);
+    RECT rc = { 0, 0, clientW, clientH };
+    DWORD dwStyle = WS_POPUP | WS_CAPTION | WS_SYSMENU | WS_VISIBLE;
+    DWORD dwExStyle = WS_EX_DLGMODALFRAME | WS_EX_TOPMOST;
+    AdjustWindowRectEx(&rc, dwStyle, FALSE, dwExStyle);
+    int dlgW = rc.right - rc.left;
+    int dlgH = rc.bottom - rc.top;
+
     // Center dialog relative to owner or desktop
     RECT rcParent;
     if (hOwner && IsWindow(hOwner)) {
@@ -359,84 +397,93 @@ bool ConfigManager::ShowSettingsDialog(HWND parentHwnd) {
     } else {
         GetWindowRect(GetDesktopWindow(), &rcParent);
     }
-    int dlgW = 440;
-    int dlgH = 330;
     int x = rcParent.left + ((rcParent.right - rcParent.left) - dlgW) / 2;
     int y = rcParent.top + ((rcParent.bottom - rcParent.top) - dlgH) / 2;
+    if (x < 50) x = 50;
+    if (y < 50) y = 50;
 
     HWND hDlg = CreateWindowExA(
-        WS_EX_DLGMODALFRAME | WS_EX_TOPMOST,
+        dwExStyle,
         "ClipboardPasteSettingsDlg",
         "Clipboard Paste - Preferences",
-        WS_POPUP | WS_CAPTION | WS_SYSMENU | WS_VISIBLE,
+        dwStyle,
         x, y, dlgW, dlgH,
         hOwner, NULL, hInst, NULL
     );
 
     if (!hDlg) return false;
 
-    HFONT hFont = g_hDlgFont ? g_hDlgFont : (HFONT)GetStockObject(DEFAULT_GUI_FONT);
+    if (g_hDlgFont) {
+        DeleteObject(g_hDlgFont);
+        g_hDlgFont = NULL;
+    }
+    int fontH = -(int)(12.0f * scale + 0.5f);
+    g_hDlgFont = CreateFontA(fontH, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
+                             DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
+                             CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_DONTCARE, "Segoe UI");
 
     auto addLabel = [&](const char* text, int lx, int ly, int lw, int lh) {
         HWND lbl = CreateWindowExA(0, "STATIC", text, WS_CHILD | WS_VISIBLE | SS_LEFT,
                                    lx, ly, lw, lh, hDlg, NULL, hInst, NULL);
-        SendMessage(lbl, WM_SETFONT, (WPARAM)hFont, TRUE);
+        SendMessage(lbl, WM_SETFONT, (WPARAM)g_hDlgFont, TRUE);
         return lbl;
     };
 
-    addLabel("Configure Hotkeys:", 18, 14, 380, 20);
+    auto makeCombo = [&](int cid, int cx, int cy, int cw) {
+        HWND h = CreateWindowExA(0, "COMBOBOX", "", WS_CHILD | WS_VISIBLE | CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP,
+                                 cx, cy, cw, S(180), hDlg, (HMENU)(INT_PTR)cid, hInst, NULL);
+        SendMessage(h, WM_SETFONT, (WPARAM)g_hDlgFont, TRUE);
+        SendMessageA(h, CB_SETITEMHEIGHT, (WPARAM)-1, (LPARAM)S(22));
+        SendMessageA(h, CB_SETITEMHEIGHT, (WPARAM)0,  (LPARAM)S(20));
+        return h;
+    };
+
+    addLabel("Configure Hotkeys:", S(18), S(12), S(380), S(20));
 
     // Row 1: Copy
-    addLabel("1. Copy to Buffer:", 18, 44, 160, 22);
-    HWND hModCopy = CreateWindowExA(0, "COMBOBOX", "", WS_CHILD | WS_VISIBLE | CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP,
-                                    184, 42, 116, 180, hDlg, (HMENU)IDC_MOD_COPY, hInst, NULL);
-    HWND hKeyCopy = CreateWindowExA(0, "COMBOBOX", "", WS_CHILD | WS_VISIBLE | CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP,
-                                    308, 42, 96, 180, hDlg, (HMENU)IDC_KEY_COPY, hInst, NULL);
+    addLabel("1. Copy to Buffer:", S(18), S(38), S(160), S(22));
+    HWND hModCopy = makeCombo(IDC_MOD_COPY, S(184), S(36), S(116));
+    HWND hKeyCopy = makeCombo(IDC_KEY_COPY, S(308), S(36), S(96));
 
     // Row 2: Paste Place
-    addLabel("2. Paste in Place:", 18, 76, 160, 22);
-    HWND hModPlace = CreateWindowExA(0, "COMBOBOX", "", WS_CHILD | WS_VISIBLE | CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP,
-                                     184, 74, 116, 180, hDlg, (HMENU)IDC_MOD_PLACE, hInst, NULL);
-    HWND hKeyPlace = CreateWindowExA(0, "COMBOBOX", "", WS_CHILD | WS_VISIBLE | CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP,
-                                     308, 74, 96, 180, hDlg, (HMENU)IDC_KEY_PLACE, hInst, NULL);
+    addLabel("2. Paste in Place:", S(18), S(68), S(160), S(22));
+    HWND hModPlace = makeCombo(IDC_MOD_PLACE, S(184), S(66), S(116));
+    HWND hKeyPlace = makeCombo(IDC_KEY_PLACE, S(308), S(66), S(96));
 
     // Row 3: Paste Center
-    addLabel("3. Paste to Center:", 18, 108, 160, 22);
-    HWND hModCenter = CreateWindowExA(0, "COMBOBOX", "", WS_CHILD | WS_VISIBLE | CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP,
-                                      184, 106, 116, 180, hDlg, (HMENU)IDC_MOD_CENTER, hInst, NULL);
-    HWND hKeyCenter = CreateWindowExA(0, "COMBOBOX", "", WS_CHILD | WS_VISIBLE | CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP,
-                                      308, 106, 96, 180, hDlg, (HMENU)IDC_KEY_CENTER, hInst, NULL);
+    addLabel("3. Paste to Center:", S(18), S(98), S(160), S(22));
+    HWND hModCenter = makeCombo(IDC_MOD_CENTER, S(184), S(96), S(116));
+    HWND hKeyCenter = makeCombo(IDC_KEY_CENTER, S(308), S(96), S(96));
 
     // Row 4: Paste on All Artboards
-    addLabel("4. Paste on All Artboards:", 18, 140, 160, 22);
-    HWND hModAll = CreateWindowExA(0, "COMBOBOX", "", WS_CHILD | WS_VISIBLE | CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP,
-                                   184, 138, 116, 180, hDlg, (HMENU)IDC_MOD_ALL, hInst, NULL);
-    HWND hKeyAll = CreateWindowExA(0, "COMBOBOX", "", WS_CHILD | WS_VISIBLE | CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP,
-                                   308, 138, 96, 180, hDlg, (HMENU)IDC_KEY_ALL, hInst, NULL);
+    addLabel("4. Paste on All Artboards:", S(18), S(128), S(160), S(22));
+    HWND hModAll = makeCombo(IDC_MOD_ALL, S(184), S(126), S(116));
+    HWND hKeyAll = makeCombo(IDC_KEY_ALL, S(308), S(126), S(96));
 
     // Checkbox 1: Select object(s) after paste
     HWND hChkSelect = CreateWindowExA(0, "BUTTON", "Select object(s) after paste",
                                       WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX | WS_TABSTOP,
-                                      18, 170, 380, 20, hDlg, (HMENU)IDC_CHK_SELECT, hInst, NULL);
+                                      S(18), S(162), S(380), S(20), hDlg, (HMENU)IDC_CHK_SELECT, hInst, NULL);
+    SendMessage(hChkSelect, WM_SETFONT, (WPARAM)g_hDlgFont, TRUE);
 
     // Checkbox 2: Disable plugin (ignore hotkeys)
     HWND hChkDisable = CreateWindowExA(0, "BUTTON", "Disable plugin (ignore hotkeys)",
                                        WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX | WS_TABSTOP,
-                                       18, 195, 380, 20, hDlg, (HMENU)IDC_CHK_DISABLE, hInst, NULL);
+                                       S(18), S(187), S(380), S(20), hDlg, (HMENU)IDC_CHK_DISABLE, hInst, NULL);
+    SendMessage(hChkDisable, WM_SETFONT, (WPARAM)g_hDlgFont, TRUE);
 
     // Bottom buttons (strictly in English)
     HWND hBtnDefaults = CreateWindowExA(0, "BUTTON", "Defaults", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON | WS_TABSTOP,
-                                        18, 230, 90, 28, hDlg, (HMENU)IDC_BTN_DEFAULTS, hInst, NULL);
-    HWND hBtnOk = CreateWindowExA(0, "BUTTON", "Save", WS_CHILD | WS_VISIBLE | BS_DEFPUSHBUTTON | WS_TABSTOP,
-                                  228, 230, 88, 28, hDlg, (HMENU)IDC_BTN_OK, hInst, NULL);
-    HWND hBtnCancel = CreateWindowExA(0, "BUTTON", "Cancel", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON | WS_TABSTOP,
-                                      324, 230, 80, 28, hDlg, (HMENU)IDC_BTN_CANCEL, hInst, NULL);
+                                        S(18), S(226), S(90), S(26), hDlg, (HMENU)IDC_BTN_DEFAULTS, hInst, NULL);
+    SendMessage(hBtnDefaults, WM_SETFONT, (WPARAM)g_hDlgFont, TRUE);
 
-    HWND allControls[] = { hModCopy, hKeyCopy, hModPlace, hKeyPlace, hModCenter, hKeyCenter,
-                           hModAll, hKeyAll, hChkSelect, hChkDisable, hBtnDefaults, hBtnOk, hBtnCancel };
-    for (HWND c : allControls) {
-        SendMessage(c, WM_SETFONT, (WPARAM)hFont, TRUE);
-    }
+    HWND hBtnOk = CreateWindowExA(0, "BUTTON", "Save", WS_CHILD | WS_VISIBLE | BS_DEFPUSHBUTTON | WS_TABSTOP,
+                                  S(228), S(226), S(88), S(26), hDlg, (HMENU)IDC_BTN_OK, hInst, NULL);
+    SendMessage(hBtnOk, WM_SETFONT, (WPARAM)g_hDlgFont, TRUE);
+
+    HWND hBtnCancel = CreateWindowExA(0, "BUTTON", "Cancel", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON | WS_TABSTOP,
+                                      S(324), S(226), S(80), S(26), hDlg, (HMENU)IDC_BTN_CANCEL, hInst, NULL);
+    SendMessage(hBtnCancel, WM_SETFONT, (WPARAM)g_hDlgFont, TRUE);
 
     PopulateCombos(hDlg);
 

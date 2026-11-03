@@ -21,6 +21,7 @@ extern "C" {
     AIDocumentListSuite*  sAIDocumentList = nullptr;
     AIUIThemeSuite*       sAIUITheme = nullptr;
     AINotifierSuite*      sAINotifier = nullptr;
+    AIUserSuite*          sAIUser = nullptr;
 }
 
 extern "C" void ShowPlatformAssert(const bool success, const char* message) {
@@ -52,6 +53,7 @@ static int32_t sAIDocumentViewVer = 0;
 static int32_t sAIDocumentListVer = 0;
 static int32_t sAIUIThemeVer = 0;
 static int32_t sAINotifierVer = 0;
+static int32_t sAIUserVer = 0;
 
 void PluginLog(const char* fmt, ...) {
     char buf[1024];
@@ -127,9 +129,10 @@ SPErr AcquireSuites(SPBasicSuite* basic) {
     AcquireSuiteAuto(basic, kAIDocumentListSuite, kAIDocumentListSuiteVersion, (const void**)&sAIDocumentList, &sAIDocumentListVer);
     AcquireSuiteAuto(basic, kAIUIThemeSuite, kAIUIThemeSuiteVersion, (const void**)&sAIUITheme, &sAIUIThemeVer);
     AcquireSuiteAuto(basic, kAINotifierSuite, kAINotifierSuiteVersion, (const void**)&sAINotifier, &sAINotifierVer);
+    AcquireSuiteAuto(basic, kAIUserSuite, kAIUserSuiteVersion, (const void**)&sAIUser, &sAIUserVer);
 
-    PluginLog("[AcquireSuites] Completed. sAIPanel=%p, sAIMenu=%p, sAIMatchingArt=%p, sAIArt=%p, sAIUITheme=%p, sAINotifier=%p",
-              sAIPanel, sAIMenu, sAIMatchingArt, sAIArt, sAIUITheme, sAINotifier);
+    PluginLog("[AcquireSuites] Completed. sAIPanel=%p, sAIMenu=%p, sAIMatchingArt=%p, sAIArt=%p, sAIUITheme=%p, sAINotifier=%p, sAIUser=%p",
+              sAIPanel, sAIMenu, sAIMatchingArt, sAIArt, sAIUITheme, sAINotifier, sAIUser);
     return kSPNoError;
 }
 
@@ -161,6 +164,7 @@ void ReleaseSuites(SPBasicSuite* basic) {
     RELEASE_AUTO(kAIDocumentListSuite, sAIDocumentListVer, sAIDocumentList);
     RELEASE_AUTO(kAIUIThemeSuite, sAIUIThemeVer, sAIUITheme);
     RELEASE_AUTO(kAINotifierSuite, sAINotifierVer, sAINotifier);
+    RELEASE_AUTO(kAIUserSuite, sAIUserVer, sAIUser);
 
     #undef RELEASE_AUTO
     sSPBasic = nullptr;

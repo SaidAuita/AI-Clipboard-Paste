@@ -25,6 +25,7 @@
 #include "AIDocumentList.h"
 #include "AIUITheme.h"
 #include "AINotifier.h"
+#include "AIUser.h"
 #include "SPInterf.h"
 #include "SPAccess.h"
 
@@ -48,6 +49,7 @@ extern "C" {
     extern AIDocumentListSuite*  sAIDocumentList;
     extern AIUIThemeSuite*       sAIUITheme;
     extern AINotifierSuite*      sAINotifier;
+    extern AIUserSuite*          sAIUser;
 }
 
 class AppContext {

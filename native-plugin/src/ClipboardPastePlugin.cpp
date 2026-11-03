@@ -4,7 +4,7 @@
 #include <windows.h>
 #include <shellapi.h>
 
-#define PLUGIN_VERSION_STR     "v1.17"
+#define PLUGIN_VERSION_STR     "v1.18"
 
 #define IDC_STATIC_TITLE       100
 #define IDC_STATIC_VERSION     101
@@ -32,12 +32,86 @@ static HWND g_hStaticLinkTools = NULL;
 
 static HFONT g_hUIFont = NULL;
 static HFONT g_hHeaderFont = NULL;
-static HFONT g_hFooterFont = NULL;
+static HFONT g_hSmallFont = NULL;
 static HBRUSH g_hPanelBgBrush = NULL;
+static float g_appliedFontScale = 0.0f;
 static WNDPROC g_oldPanelProc = NULL;
 static WNDPROC g_oldButtonProc = NULL;
 static WNDPROC g_oldStatusProc = NULL;
 static HHOOK g_hKeyHook = NULL;
+
+static float GetPanelScale(HWND hwnd) {
+    float aiScale = 1.0f;
+    if (sAIUser && sAIUser->GetAppScaleFactor) {
+        AIReal s = sAIUser->GetAppScaleFactor();
+        if (s >= 0.5f && s <= 5.0f) {
+            aiScale = (float)s;
+        }
+    }
+
+    float winDpiScale = 1.0f;
+    if (hwnd) {
+        HMODULE hUser32 = GetModuleHandleW(L"user32.dll");
+        if (hUser32) {
+            typedef UINT (WINAPI *GetDpiForWindowProc)(HWND);
+            GetDpiForWindowProc pGetDpi = (GetDpiForWindowProc)GetProcAddress(hUser32, "GetDpiForWindow");
+            if (pGetDpi) {
+                UINT dpi = pGetDpi(hwnd);
+                if (dpi > 0) winDpiScale = (float)dpi / 96.0f;
+            }
+        }
+        if (winDpiScale <= 0.1f) {
+            HDC hdc = GetDC(hwnd);
+            if (hdc) {
+                int dpi = GetDeviceCaps(hdc, LOGPIXELSY);
+                ReleaseDC(hwnd, hdc);
+                if (dpi > 0) winDpiScale = (float)dpi / 96.0f;
+            }
+        }
+    }
+
+    float finalScale = (std::max)(aiScale, winDpiScale);
+    if (finalScale < 0.75f) finalScale = 0.75f;
+    if (finalScale > 4.0f)  finalScale = 4.0f;
+    return finalScale;
+}
+
+static void EnsureFontsForScale(HWND hwnd, float scale) {
+    if (std::abs(g_appliedFontScale - scale) < 0.01f && g_hUIFont) return;
+    g_appliedFontScale = scale;
+
+    if (g_hUIFont)     { DeleteObject(g_hUIFont);     g_hUIFont = NULL; }
+    if (g_hHeaderFont) { DeleteObject(g_hHeaderFont); g_hHeaderFont = NULL; }
+    if (g_hSmallFont)  { DeleteObject(g_hSmallFont);  g_hSmallFont = NULL; }
+
+    int szUI     = -(int)(11.0f * scale + 0.5f);
+    int szHeader = -(int)(13.0f * scale + 0.5f);
+    int szSmall  = -(int)(10.0f * scale + 0.5f);
+
+    g_hUIFont = CreateFontA(szUI, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
+                            DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
+                            CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_DONTCARE, "Segoe UI");
+    g_hHeaderFont = CreateFontA(szHeader, 0, 0, 0, FW_BOLD, FALSE, FALSE, FALSE,
+                                DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
+                                CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_DONTCARE, "Segoe UI");
+    g_hSmallFont = CreateFontA(szSmall, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
+                               DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
+                               CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_DONTCARE, "Segoe UI");
+
+    if (hwnd && IsWindow(hwnd)) {
+        if (g_hStaticHeaderTitle) SendMessage(g_hStaticHeaderTitle, WM_SETFONT, (WPARAM)g_hHeaderFont, TRUE);
+        if (g_hStaticHeaderVersion) SendMessage(g_hStaticHeaderVersion, WM_SETFONT, (WPARAM)g_hSmallFont, TRUE);
+        if (g_hBtnCopy) SendMessage(g_hBtnCopy, WM_SETFONT, (WPARAM)g_hUIFont, TRUE);
+        if (g_hBtnPasteInPlace) SendMessage(g_hBtnPasteInPlace, WM_SETFONT, (WPARAM)g_hUIFont, TRUE);
+        if (g_hBtnPasteCenter) SendMessage(g_hBtnPasteCenter, WM_SETFONT, (WPARAM)g_hUIFont, TRUE);
+        if (g_hBtnPasteAllArtboards) SendMessage(g_hBtnPasteAllArtboards, WM_SETFONT, (WPARAM)g_hUIFont, TRUE);
+        if (g_hBtnClear) SendMessage(g_hBtnClear, WM_SETFONT, (WPARAM)g_hUIFont, TRUE);
+        if (g_hBtnSettings) SendMessage(g_hBtnSettings, WM_SETFONT, (WPARAM)g_hUIFont, TRUE);
+        if (g_hStaticStatus) SendMessage(g_hStaticStatus, WM_SETFONT, (WPARAM)g_hUIFont, TRUE);
+        if (g_hStaticLinkAuthor) SendMessage(g_hStaticLinkAuthor, WM_SETFONT, (WPARAM)g_hSmallFont, TRUE);
+        if (g_hStaticLinkTools) SendMessage(g_hStaticLinkTools, WM_SETFONT, (WPARAM)g_hSmallFont, TRUE);
+    }
+}
 
 struct UIThemeColors {
     bool isDark;
@@ -49,6 +123,8 @@ struct UIThemeColors {
     COLORREF btnBgPressed;
     COLORREF btnBorder;
     COLORREF btnText;
+    COLORREF accentBg;
+    COLORREF accentText;
     COLORREF statusBg;
     COLORREF statusBorder;
     COLORREF statusText;
@@ -67,12 +143,14 @@ static UIThemeColors GetCurrentThemeColors() {
         // Dark theme: matches native Illustrator panel (Properties, Edit Artboards)
         c.panelBg       = RGB(53, 53, 53);      // #353535
         c.textPrimary   = RGB(235, 235, 235);   // #ebebeb
-        c.textSecondary = RGB(150, 150, 150);   // #969696
+        c.textSecondary = RGB(160, 160, 160);   // #a0a0a0
         c.btnBg         = RGB(68, 68, 68);      // #444444 (like Edit Artboards)
         c.btnBgHover    = RGB(84, 84, 84);      // #545454
         c.btnBgPressed  = RGB(50, 50, 50);      // #323232
         c.btnBorder     = RGB(92, 92, 92);      // #5c5c5c
         c.btnText       = RGB(235, 235, 235);   // #ebebeb
+        c.accentBg      = RGB(20, 115, 230);    // #1473e6 Adobe Blue
+        c.accentText    = RGB(255, 255, 255);
         c.statusBg      = RGB(42, 42, 42);      // #2a2a2a
         c.statusBorder  = RGB(70, 70, 70);      // #464646
         c.statusText    = RGB(215, 215, 215);   // #d7d7d7
@@ -87,10 +165,12 @@ static UIThemeColors GetCurrentThemeColors() {
         c.btnBgPressed  = RGB(220, 220, 220);   // #dcdcdc
         c.btnBorder     = RGB(175, 175, 175);   // #afafaf
         c.btnText       = RGB(32, 32, 32);      // #202020
+        c.accentBg      = RGB(14, 100, 215);    // #0e64d7
+        c.accentText    = RGB(255, 255, 255);
         c.statusBg      = RGB(230, 230, 230);   // #e6e6e6
         c.statusBorder  = RGB(195, 195, 195);   // #c3c3c3
         c.statusText    = RGB(35, 35, 35);      // #232323
-        c.linkColor     = RGB(15, 105, 210);    // #0f69d2
+        c.linkColor     = RGB(30, 100, 200);    // #1e64c8
     }
 
     if (sAIUITheme) {
@@ -162,7 +242,10 @@ static LRESULT CALLBACK CustomButtonProc(HWND hwnd, UINT msg, WPARAM wParam, LPA
             HGDIOBJ oldPen = SelectObject(memDC, hPen);
             HGDIOBJ oldBrush = SelectObject(memDC, hBrush);
 
-            RoundRect(memDC, rc.left, rc.top, rc.right, rc.bottom, 6, 6);
+            float scale = GetPanelScale(hwnd);
+            int corner = (int)(3.0f * scale + 0.5f);
+            if (corner < 2) corner = 2;
+            RoundRect(memDC, rc.left, rc.top, rc.right, rc.bottom, corner * 2, corner * 2);
 
             SelectObject(memDC, oldPen);
             SelectObject(memDC, oldBrush);
@@ -227,7 +310,10 @@ static LRESULT CALLBACK CustomStatusProc(HWND hwnd, UINT msg, WPARAM wParam, LPA
         HGDIOBJ oldPen = SelectObject(memDC, hPen);
         HGDIOBJ oldBrush = SelectObject(memDC, hBrush);
 
-        RoundRect(memDC, rc.left, rc.top, rc.right, rc.bottom, 6, 6);
+        float scale = GetPanelScale(hwnd);
+        int corner = (int)(3.0f * scale + 0.5f);
+        if (corner < 2) corner = 2;
+        RoundRect(memDC, rc.left, rc.top, rc.right, rc.bottom, corner * 2, corner * 2);
 
         SelectObject(memDC, oldPen);
         SelectObject(memDC, oldBrush);
@@ -241,11 +327,13 @@ static LRESULT CALLBACK CustomStatusProc(HWND hwnd, UINT msg, WPARAM wParam, LPA
         SetTextColor(memDC, theme.statusText);
         SelectObject(memDC, g_hUIFont);
 
+        int padX = (int)(6.0f * scale + 0.5f);
+        int padY = (int)(2.0f * scale + 0.5f);
         RECT textRc = rc;
-        textRc.left += 8;
-        textRc.top += 3;
-        textRc.right -= 8;
-        textRc.bottom -= 3;
+        textRc.left += padX;
+        textRc.top += padY;
+        textRc.right -= padX;
+        textRc.bottom -= padY;
         DrawTextA(memDC, text, -1, &textRc, DT_LEFT | DT_WORDBREAK);
 
         BitBlt(hdc, rc.left, rc.top, rc.right - rc.left, rc.bottom - rc.top, memDC, 0, 0, SRCCOPY);
@@ -268,59 +356,68 @@ static void RelayoutPanel(HWND hwnd) {
     RECT rc;
     GetClientRect(hwnd, &rc);
     int width = rc.right - rc.left;
-    int height = rc.bottom - rc.top;
+    if (width <= 0) return;
 
-    int pad = 8;
-    int btnW = (std::max)(100, width - (pad * 2));
-    int btnH = 26;
+    float scale = GetPanelScale(hwnd);
+    EnsureFontsForScale(hwnd, scale);
 
-    int y = 6;
+    auto S = [scale](int v) -> int {
+        return (int)(v * scale + 0.5f);
+    };
+
+    int pad = S(8);
+    int btnW = (std::max)(S(100), width - (pad * 2));
+    int btnH = S(22);
+
+    int y = S(6);
     // Header row: Title (left) & Version (right)
     if (g_hStaticHeaderTitle && g_hStaticHeaderVersion) {
-        int verW = 45;
-        int titleW = (std::max)(60, btnW - verW);
-        SetWindowPos(g_hStaticHeaderTitle, NULL, pad, y, titleW, 18, SWP_NOZORDER);
-        SetWindowPos(g_hStaticHeaderVersion, NULL, pad + btnW - verW, y, verW, 18, SWP_NOZORDER);
-        y += 18 + 5;
+        int verW = S(45);
+        int titleW = (std::max)(S(60), btnW - verW);
+        SetWindowPos(g_hStaticHeaderTitle, NULL, pad, y, titleW, S(18), SWP_NOZORDER);
+        SetWindowPos(g_hStaticHeaderVersion, NULL, pad + btnW - verW, y + S(1), verW, S(16), SWP_NOZORDER);
+        y += S(18) + S(4);
     }
 
     if (g_hBtnCopy) {
         SetWindowPos(g_hBtnCopy, NULL, pad, y, btnW, btnH, SWP_NOZORDER);
-        y += btnH + 4;
+        y += btnH + S(3);
     }
     if (g_hBtnPasteInPlace) {
         SetWindowPos(g_hBtnPasteInPlace, NULL, pad, y, btnW, btnH, SWP_NOZORDER);
-        y += btnH + 4;
+        y += btnH + S(3);
     }
     if (g_hBtnPasteCenter) {
         SetWindowPos(g_hBtnPasteCenter, NULL, pad, y, btnW, btnH, SWP_NOZORDER);
-        y += btnH + 4;
+        y += btnH + S(3);
     }
     if (g_hBtnPasteAllArtboards) {
         SetWindowPos(g_hBtnPasteAllArtboards, NULL, pad, y, btnW, btnH, SWP_NOZORDER);
-        y += btnH + 5;
+        y += btnH + S(4);
     }
     if (g_hBtnClear && g_hBtnSettings) {
-        int halfW = (btnW - 6) / 2;
-        SetWindowPos(g_hBtnClear, NULL, pad, y, halfW, 24, SWP_NOZORDER);
-        SetWindowPos(g_hBtnSettings, NULL, pad + halfW + 6, y, halfW, 24, SWP_NOZORDER);
-        y += 24 + 5;
+        int halfW = (btnW - S(4)) / 2;
+        int smallBtnH = S(20);
+        SetWindowPos(g_hBtnClear, NULL, pad, y, halfW, smallBtnH, SWP_NOZORDER);
+        SetWindowPos(g_hBtnSettings, NULL, pad + halfW + S(4), y, halfW, smallBtnH, SWP_NOZORDER);
+        y += smallBtnH + S(5);
     } else if (g_hBtnClear) {
-        int clearW = (std::min)(110, btnW);
-        SetWindowPos(g_hBtnClear, NULL, pad, y, clearW, 24, SWP_NOZORDER);
-        y += 24 + 5;
+        int clearW = (std::min)(S(110), btnW);
+        SetWindowPos(g_hBtnClear, NULL, pad, y, clearW, S(20), SWP_NOZORDER);
+        y += S(20) + S(5);
     }
     if (g_hStaticStatus) {
-        SetWindowPos(g_hStaticStatus, NULL, pad, y, btnW, 34, SWP_NOZORDER);
-        y += 34 + 6;
+        int statusH = S(32);
+        SetWindowPos(g_hStaticStatus, NULL, pad, y, btnW, statusH, SWP_NOZORDER);
+        y += statusH + S(5);
     }
-    // Footer links: single line, 18px high
+    // Footer links: single line, S(16) high
     if (g_hStaticLinkAuthor) {
-        SetWindowPos(g_hStaticLinkAuthor, NULL, pad, y, btnW, 18, SWP_NOZORDER);
-        y += 18 + 2;
+        SetWindowPos(g_hStaticLinkAuthor, NULL, pad, y, btnW, S(16), SWP_NOZORDER);
+        y += S(16) + S(2);
     }
     if (g_hStaticLinkTools) {
-        SetWindowPos(g_hStaticLinkTools, NULL, pad, y, btnW, 18, SWP_NOZORDER);
+        SetWindowPos(g_hStaticLinkTools, NULL, pad, y, btnW, S(16), SWP_NOZORDER);
     }
 }
 
@@ -409,6 +506,11 @@ static LRESULT CALLBACK PanelWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM 
             }
             break;
         }
+        case WM_DPICHANGED:
+            RelayoutPanel(hwnd);
+            InvalidateRect(hwnd, NULL, TRUE);
+            return 0;
+
         case WM_SIZE:
             RelayoutPanel(hwnd);
             break;
@@ -612,9 +714,9 @@ SPErr ClipboardPastePlugin::ShutdownPlugin(void* message) {
         DeleteObject(g_hHeaderFont);
         g_hHeaderFont = NULL;
     }
-    if (g_hFooterFont) {
-        DeleteObject(g_hFooterFont);
-        g_hFooterFont = NULL;
+    if (g_hSmallFont) {
+        DeleteObject(g_hSmallFont);
+        g_hSmallFont = NULL;
     }
     if (g_hPanelBgBrush) {
         DeleteObject(g_hPanelBgBrush);
@@ -651,8 +753,8 @@ SPErr ClipboardPastePlugin::CreateDockablePanel() {
 
     AISize minS = { 100, 100 };
     AISize maxS = { 1200, 1200 };
-    AISize prefConstS = { 190, 265 };
-    AISize prefUnconstS = { 210, 270 };
+    AISize prefConstS = { 190, 235 };
+    AISize prefUnconstS = { 210, 240 };
     sAIPanel->SetSizes(m_panelRef, minS, prefUnconstS, prefConstS, maxS);
 
     // Set panel dock SVG icon (light & dark theme)
@@ -675,90 +777,62 @@ SPErr ClipboardPastePlugin::CreateDockablePanel() {
         HINSTANCE hInst = (HINSTANCE)GetWindowLongPtr(m_hPanelDlg, GWLP_HINSTANCE);
         if (!hInst) hInst = GetModuleHandle(NULL);
 
-        if (!g_hUIFont) {
-            g_hUIFont = CreateFontA(-12, 0, 0, 0, FW_SEMIBOLD, FALSE, FALSE, FALSE,
-                                    DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
-                                    CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_DONTCARE, "Segoe UI");
-        }
-        if (!g_hHeaderFont) {
-            g_hHeaderFont = CreateFontA(-13, 0, 0, 0, FW_BOLD, FALSE, FALSE, FALSE,
-                                        DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
-                                        CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_DONTCARE, "Segoe UI");
-        }
-        if (!g_hFooterFont) {
-            g_hFooterFont = CreateFontA(-13, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
-                                        DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
-                                        CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_DONTCARE, "Segoe UI");
-        }
-
         // Header controls: Title and Version
         g_hStaticHeaderTitle = CreateWindowExA(
             0, "STATIC", "Clipboard Paste",
             WS_VISIBLE | WS_CHILD | SS_LEFT,
-            10, 6, 160, 18, m_hPanelDlg, (HMENU)IDC_STATIC_TITLE, hInst, NULL);
+            0, 0, 100, 20, m_hPanelDlg, (HMENU)IDC_STATIC_TITLE, hInst, NULL);
 
         g_hStaticHeaderVersion = CreateWindowExA(
             0, "STATIC", PLUGIN_VERSION_STR,
             WS_VISIBLE | WS_CHILD | SS_RIGHT,
-            170, 6, 60, 18, m_hPanelDlg, (HMENU)IDC_STATIC_VERSION, hInst, NULL);
+            0, 0, 50, 20, m_hPanelDlg, (HMENU)IDC_STATIC_VERSION, hInst, NULL);
 
         g_hBtnCopy = CreateWindowExA(
             0, "BUTTON", "Copy to Buffer (F5)",
             WS_VISIBLE | WS_CHILD | BS_PUSHBUTTON,
-            10, 29, 220, 26, m_hPanelDlg, (HMENU)IDC_BTN_COPY, hInst, NULL);
+            0, 0, 100, 24, m_hPanelDlg, (HMENU)IDC_BTN_COPY, hInst, NULL);
 
         g_hBtnPasteInPlace = CreateWindowExA(
             0, "BUTTON", "Paste In Place (F6)",
             WS_VISIBLE | WS_CHILD | BS_PUSHBUTTON,
-            10, 59, 220, 26, m_hPanelDlg, (HMENU)IDC_BTN_PASTE_IN_PLACE, hInst, NULL);
+            0, 0, 100, 24, m_hPanelDlg, (HMENU)IDC_BTN_PASTE_IN_PLACE, hInst, NULL);
 
         g_hBtnPasteCenter = CreateWindowExA(
             0, "BUTTON", "Paste to Center (F7)",
             WS_VISIBLE | WS_CHILD | BS_PUSHBUTTON,
-            10, 89, 220, 26, m_hPanelDlg, (HMENU)IDC_BTN_PASTE_CENTER, hInst, NULL);
+            0, 0, 100, 24, m_hPanelDlg, (HMENU)IDC_BTN_PASTE_CENTER, hInst, NULL);
 
         g_hBtnPasteAllArtboards = CreateWindowExA(
             0, "BUTTON", "Paste to All Artboards (F8)",
             WS_VISIBLE | WS_CHILD | BS_PUSHBUTTON,
-            10, 119, 220, 26, m_hPanelDlg, (HMENU)IDC_BTN_PASTE_ALL_ARTBOARDS, hInst, NULL);
+            0, 0, 100, 24, m_hPanelDlg, (HMENU)IDC_BTN_PASTE_ALL_ARTBOARDS, hInst, NULL);
 
         g_hBtnClear = CreateWindowExA(
             0, "BUTTON", "Clear Buffer",
             WS_VISIBLE | WS_CHILD | BS_PUSHBUTTON,
-            10, 150, 100, 24, m_hPanelDlg, (HMENU)IDC_BTN_CLEAR, hInst, NULL);
+            0, 0, 50, 20, m_hPanelDlg, (HMENU)IDC_BTN_CLEAR, hInst, NULL);
 
         g_hBtnSettings = CreateWindowExA(
             0, "BUTTON", "Settings...",
             WS_VISIBLE | WS_CHILD | BS_PUSHBUTTON,
-            120, 150, 100, 24, m_hPanelDlg, (HMENU)IDC_BTN_SETTINGS, hInst, NULL);
+            0, 0, 50, 20, m_hPanelDlg, (HMENU)IDC_BTN_SETTINGS, hInst, NULL);
 
         g_hStaticStatus = CreateWindowExA(
             0, "STATIC", "Buffer Status: Empty\n(No selection copied)",
             WS_VISIBLE | WS_CHILD | SS_LEFT,
-            10, 179, 220, 34, m_hPanelDlg, (HMENU)IDC_STATIC_STATUS, hInst, NULL);
+            0, 0, 100, 32, m_hPanelDlg, (HMENU)IDC_STATIC_STATUS, hInst, NULL);
 
         // Footer links: single line, no word wrap, end ellipsis, clickable
         g_hStaticLinkAuthor = CreateWindowExA(
             0, "STATIC", "github.com/SaidAuita/AI-Clipboard-Paste",
             WS_VISIBLE | WS_CHILD | SS_LEFTNOWORDWRAP | SS_ENDELLIPSIS | SS_NOTIFY,
-            10, 219, 220, 18, m_hPanelDlg, (HMENU)IDC_STATIC_LINK_AUTHOR, hInst, NULL);
+            0, 0, 100, 16, m_hPanelDlg, (HMENU)IDC_STATIC_LINK_AUTHOR, hInst, NULL);
 
         g_hStaticLinkTools = CreateWindowExA(
             0, "STATIC", "More scripts: ph-cu-s.com/tools",
             WS_VISIBLE | WS_CHILD | SS_LEFTNOWORDWRAP | SS_ENDELLIPSIS | SS_NOTIFY,
-            10, 239, 220, 18, m_hPanelDlg, (HMENU)IDC_STATIC_LINK_TOOLS, hInst, NULL);
-
-        SendMessage(g_hStaticHeaderTitle, WM_SETFONT, (WPARAM)g_hHeaderFont, TRUE);
-        SendMessage(g_hStaticHeaderVersion, WM_SETFONT, (WPARAM)g_hFooterFont, TRUE);
-        SendMessage(g_hBtnCopy, WM_SETFONT, (WPARAM)g_hUIFont, TRUE);
-        SendMessage(g_hBtnPasteInPlace, WM_SETFONT, (WPARAM)g_hUIFont, TRUE);
-        SendMessage(g_hBtnPasteCenter, WM_SETFONT, (WPARAM)g_hUIFont, TRUE);
-        SendMessage(g_hBtnPasteAllArtboards, WM_SETFONT, (WPARAM)g_hUIFont, TRUE);
-        SendMessage(g_hBtnClear, WM_SETFONT, (WPARAM)g_hUIFont, TRUE);
-        SendMessage(g_hBtnSettings, WM_SETFONT, (WPARAM)g_hUIFont, TRUE);
-        SendMessage(g_hStaticStatus, WM_SETFONT, (WPARAM)g_hUIFont, TRUE);
-        SendMessage(g_hStaticLinkAuthor, WM_SETFONT, (WPARAM)g_hFooterFont, TRUE);
-        SendMessage(g_hStaticLinkTools, WM_SETFONT, (WPARAM)g_hFooterFont, TRUE);
+            0, 0, 100, 16, m_hPanelDlg, (HMENU)IDC_STATIC_LINK_TOOLS, hInst, NULL);
 
         // Subclass buttons and status for native Illustrator styling and theme support
         g_oldButtonProc = (WNDPROC)GetWindowLongPtr(g_hBtnCopy, GWLP_WNDPROC);

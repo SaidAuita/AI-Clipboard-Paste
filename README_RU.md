@@ -261,6 +261,7 @@
 
 ## 🛠️ Другие проекты (Other Projects)
 
+* **[CropMarksAI](https://github.com/SaidAuita/CropMarksAI)** — Высокоскоростной нативный C++ плагин для Adobe Illustrator для профессиональной генерации меток реза.
 * **[AI Code Pro](https://github.com/SaidAuita/AI-Code-Pro)** — Профессиональный генератор штрихкодов и QR-кодов для Adobe Illustrator с пакетной обработкой, стилями и верификатором.
 * **[ID Code Pro](https://github.com/SaidAuita/ID-Code-Pro)** — Расширение генерации штрихкодов и QR-кодов для Adobe InDesign.
 * **[AI Dimension](https://github.com/SaidAuita/AI-Dimension)** — Автоматическая простановка технических размеров, зазоров и выносок для Adobe Illustrator.

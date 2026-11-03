@@ -253,6 +253,9 @@ Run `Uninstall.bat` to cleanly remove the extension from Adobe CEP without affec
 
 ### 🛠️ Other Projects
 
+**[CropMarksAI](https://github.com/SaidAuita/CropMarksAI)**
+* High-performance native C++ prepress plugin for Adobe Illustrator that generates vector crop marks with micrometer precision.
+
 **[AI Dimension](https://github.com/SaidAuita/AI-Dimension)**
 * Automatic dimensioning, gap measuring, and technical callout generator for Adobe Illustrator.
 
@@ -518,6 +521,9 @@ Run `Uninstall.bat` to cleanly remove the extension from Adobe CEP without affec
 ---
 
 ### 🛠️ Другие проекты (My Projects)
+
+**[CropMarksAI](https://github.com/SaidAuita/CropMarksAI)**
+* Высокоскоростной нативный C++ плагин для Adobe Illustrator для профессиональной генерации полиграфических обрезных меток реза в векторе.
 
 **[AI Dimension](https://github.com/SaidAuita/AI-Dimension)**
 * Автоматическая простановка технических размеров, зазоров и выносных линий для Adobe Illustrator.

@@ -1,7 +1,9 @@
 #include "ConfigManager.h"
+#include "Suites.h"
 #include <shlobj.h>
 #include <vector>
 #include <sstream>
+#include <algorithm>
 
 #pragma comment(lib, "shell32.lib")
 
@@ -48,13 +50,97 @@ ConfigManager& ConfigManager::GetInstance() {
 }
 
 ConfigManager::ConfigManager() {
-    // Defaults: F5 = Copy, F6 = Paste in Place, F7 = Paste Center, F8 = Paste All Artboards
+    // Defaults: F5 = Copy, F6 = Paste in Place, F7 = Paste Center, F8 = Paste All Artboards, F9 = Reflect Vert, F10 = Reflect Horiz
     m_copyHotkey = { VK_F5, 0 };
     m_pastePlaceHotkey = { VK_F6, 0 };
     m_pasteCenterHotkey = { VK_F7, 0 };
     m_pasteAllArtboardsHotkey = { VK_F8, 0 };
+    m_reflectVertHotkey = { VK_F9, 0 };
+    m_reflectHorizHotkey = { VK_F10, 0 };
+    SetOffsetKeyPreset(OFFSET_PRESET_NUMPAD);
 
     Load();
+}
+
+void ConfigManager::SetOffsetKeyPreset(int preset) {
+    m_offsetKeyPreset = preset;
+    switch (preset) {
+        case OFFSET_PRESET_TOPROW:
+            m_offsetKeys[1] = '1';
+            m_offsetKeys[2] = '2';
+            m_offsetKeys[3] = '3';
+            m_offsetKeys[4] = '4';
+            m_offsetKeys[5] = '5';
+            m_offsetKeys[6] = '6';
+            m_offsetKeys[7] = '7';
+            m_offsetKeys[8] = '8';
+            m_offsetKeys[9] = '9';
+            break;
+        case OFFSET_PRESET_QWE_ASD_ZXC:
+            m_offsetKeys[7] = 'Q';
+            m_offsetKeys[8] = 'W';
+            m_offsetKeys[9] = 'E';
+            m_offsetKeys[4] = 'A';
+            m_offsetKeys[5] = 'S';
+            m_offsetKeys[6] = 'D';
+            m_offsetKeys[1] = 'Z';
+            m_offsetKeys[2] = 'X';
+            m_offsetKeys[3] = 'C';
+            break;
+        case OFFSET_PRESET_UIO_JKL_M:
+            m_offsetKeys[7] = 'U';
+            m_offsetKeys[8] = 'I';
+            m_offsetKeys[9] = 'O';
+            m_offsetKeys[4] = 'J';
+            m_offsetKeys[5] = 'K';
+            m_offsetKeys[6] = 'L';
+            m_offsetKeys[1] = 'M';
+            m_offsetKeys[2] = VK_OEM_COMMA;  // ','
+            m_offsetKeys[3] = VK_OEM_PERIOD; // '.'
+            break;
+        case OFFSET_PRESET_NUMPAD:
+        default:
+            m_offsetKeys[1] = VK_NUMPAD1;
+            m_offsetKeys[2] = VK_NUMPAD2;
+            m_offsetKeys[3] = VK_NUMPAD3;
+            m_offsetKeys[4] = VK_NUMPAD4;
+            m_offsetKeys[5] = VK_NUMPAD5;
+            m_offsetKeys[6] = VK_NUMPAD6;
+            m_offsetKeys[7] = VK_NUMPAD7;
+            m_offsetKeys[8] = VK_NUMPAD8;
+            m_offsetKeys[9] = VK_NUMPAD9;
+            break;
+    }
+}
+
+UINT ConfigManager::GetOffsetKey(int dir) const {
+    if (dir >= 1 && dir <= 9) return m_offsetKeys[dir];
+    return 0;
+}
+
+void ConfigManager::SetOffsetKey(int dir, UINT vk) {
+    if (dir >= 1 && dir <= 9) {
+        m_offsetKeys[dir] = vk;
+        m_offsetKeyPreset = OFFSET_PRESET_CUSTOM;
+    }
+}
+
+std::string ConfigManager::GetOffsetKeyName(int dir) const {
+    if (dir < 1 || dir > 9) return "";
+    UINT vk = m_offsetKeys[dir];
+
+    if (vk >= VK_NUMPAD1 && vk <= VK_NUMPAD9) {
+        return std::to_string(vk - VK_NUMPAD1 + 1);
+    }
+    if ((vk >= '0' && vk <= '9') || (vk >= 'A' && vk <= 'Z')) {
+        return std::string(1, (char)vk);
+    }
+    if (vk == VK_OEM_COMMA) return ",";
+    if (vk == VK_OEM_PERIOD) return ".";
+    for (const auto& k : g_supportedKeys) {
+        if (k.vk == vk) return k.name;
+    }
+    return std::to_string(vk);
 }
 
 std::string ConfigManager::GetIniPath() const {
@@ -82,9 +168,33 @@ void ConfigManager::Load() {
     m_pasteAllArtboardsHotkey.vkCode = (UINT)GetPrivateProfileIntA("Hotkeys", "PasteAllArtboards_VK", VK_F8, ini.c_str());
     m_pasteAllArtboardsHotkey.modifiers = (UINT)GetPrivateProfileIntA("Hotkeys", "PasteAllArtboards_Mod", 0, ini.c_str());
 
+    m_reflectVertHotkey.vkCode = (UINT)GetPrivateProfileIntA("Hotkeys", "ReflectVert_VK", VK_F9, ini.c_str());
+    m_reflectVertHotkey.modifiers = (UINT)GetPrivateProfileIntA("Hotkeys", "ReflectVert_Mod", 0, ini.c_str());
+
+    m_reflectHorizHotkey.vkCode = (UINT)GetPrivateProfileIntA("Hotkeys", "ReflectHoriz_VK", VK_F10, ini.c_str());
+    m_reflectHorizHotkey.modifiers = (UINT)GetPrivateProfileIntA("Hotkeys", "ReflectHoriz_Mod", 0, ini.c_str());
+
     m_selectAfterPaste = (GetPrivateProfileIntA("General", "SelectAfterPaste", 1, ini.c_str()) != 0);
     m_disabled = (GetPrivateProfileIntA("General", "Disabled", 0, ini.c_str()) != 0) ||
                  (GetPrivateProfileIntA("General", "DisablePlugin", 0, ini.c_str()) != 0);
+
+    m_offsetCloneEnabled = (GetPrivateProfileIntA("PatternOffset", "Enabled", 1, ini.c_str()) != 0);
+    m_offsetCloneModifier = (UINT)GetPrivateProfileIntA("PatternOffset", "CloneModifier",
+                                 GetPrivateProfileIntA("PatternOffset", "Modifier", MOD_CONTROL, ini.c_str()), ini.c_str());
+    m_offsetMoveModifier = (UINT)GetPrivateProfileIntA("PatternOffset", "MoveModifier", MOD_ALT, ini.c_str());
+    char gapBuf[32] = {0};
+    GetPrivateProfileStringA("PatternOffset", "Gap", "0.0", gapBuf, sizeof(gapBuf), ini.c_str());
+    m_offsetCloneGap = std::atof(gapBuf);
+
+    m_offsetKeyPreset = GetPrivateProfileIntA("PatternOffset", "KeyPreset", OFFSET_PRESET_NUMPAD, ini.c_str());
+    SetOffsetKeyPreset(m_offsetKeyPreset);
+    for (int i = 1; i <= 9; ++i) {
+        std::string kName = "Key_" + std::to_string(i);
+        UINT savedVk = (UINT)GetPrivateProfileIntA("PatternOffset", kName.c_str(), m_offsetKeys[i], ini.c_str());
+        if (savedVk != 0) {
+            m_offsetKeys[i] = savedVk;
+        }
+    }
 }
 
 void ConfigManager::Save() {
@@ -102,9 +212,26 @@ void ConfigManager::Save() {
     WritePrivateProfileStringA("Hotkeys", "PasteAllArtboards_VK", std::to_string(m_pasteAllArtboardsHotkey.vkCode).c_str(), ini.c_str());
     WritePrivateProfileStringA("Hotkeys", "PasteAllArtboards_Mod", std::to_string(m_pasteAllArtboardsHotkey.modifiers).c_str(), ini.c_str());
 
+    WritePrivateProfileStringA("Hotkeys", "ReflectVert_VK", std::to_string(m_reflectVertHotkey.vkCode).c_str(), ini.c_str());
+    WritePrivateProfileStringA("Hotkeys", "ReflectVert_Mod", std::to_string(m_reflectVertHotkey.modifiers).c_str(), ini.c_str());
+
+    WritePrivateProfileStringA("Hotkeys", "ReflectHoriz_VK", std::to_string(m_reflectHorizHotkey.vkCode).c_str(), ini.c_str());
+    WritePrivateProfileStringA("Hotkeys", "ReflectHoriz_Mod", std::to_string(m_reflectHorizHotkey.modifiers).c_str(), ini.c_str());
+
     WritePrivateProfileStringA("General", "SelectAfterPaste", m_selectAfterPaste ? "1" : "0", ini.c_str());
     WritePrivateProfileStringA("General", "Disabled", m_disabled ? "1" : "0", ini.c_str());
     WritePrivateProfileStringA("General", "DisablePlugin", m_disabled ? "1" : "0", ini.c_str());
+
+    WritePrivateProfileStringA("PatternOffset", "Enabled", m_offsetCloneEnabled ? "1" : "0", ini.c_str());
+    WritePrivateProfileStringA("PatternOffset", "CloneModifier", std::to_string(m_offsetCloneModifier).c_str(), ini.c_str());
+    WritePrivateProfileStringA("PatternOffset", "MoveModifier", std::to_string(m_offsetMoveModifier).c_str(), ini.c_str());
+    WritePrivateProfileStringA("PatternOffset", "Modifier", std::to_string(m_offsetCloneModifier).c_str(), ini.c_str());
+    WritePrivateProfileStringA("PatternOffset", "Gap", std::to_string(m_offsetCloneGap).c_str(), ini.c_str());
+    WritePrivateProfileStringA("PatternOffset", "KeyPreset", std::to_string(m_offsetKeyPreset).c_str(), ini.c_str());
+    for (int i = 1; i <= 9; ++i) {
+        std::string kName = "Key_" + std::to_string(i);
+        WritePrivateProfileStringA("PatternOffset", kName.c_str(), std::to_string(m_offsetKeys[i]).c_str(), ini.c_str());
+    }
 }
 
 std::string ConfigManager::GetHotkeyDisplayString(const HotkeyConfig& hk) {
@@ -140,25 +267,120 @@ bool ConfigManager::MatchHotkey(const HotkeyConfig& hk, UINT vkCode, UINT curren
 #define IDC_KEY_CENTER      206
 #define IDC_MOD_ALL         211
 #define IDC_KEY_ALL         212
+#define IDC_MOD_REFLECT_VERT 230
+#define IDC_KEY_REFLECT_VERT 231
+#define IDC_MOD_REFLECT_HORIZ 232
+#define IDC_KEY_REFLECT_HORIZ 233
 #define IDC_BTN_OK          207
 #define IDC_BTN_CANCEL      208
 #define IDC_BTN_DEFAULTS    209
 #define IDC_CHK_SELECT      210
 #define IDC_CHK_DISABLE     213
+#define IDC_CHK_OFFSET      214
+#define IDC_MOD_OFFSET      215
+#define IDC_COMBO_OFFSET_PRESET 216
+#define IDC_MOD_OFFSET_MOVE 217
+#define IDC_EDIT_OFFSET_KEY_1 221
+#define IDC_EDIT_OFFSET_KEY_2 222
+#define IDC_EDIT_OFFSET_KEY_3 223
+#define IDC_EDIT_OFFSET_KEY_4 224
+#define IDC_EDIT_OFFSET_KEY_5 225
+#define IDC_EDIT_OFFSET_KEY_6 226
+#define IDC_EDIT_OFFSET_KEY_7 227
+#define IDC_EDIT_OFFSET_KEY_8 228
+#define IDC_EDIT_OFFSET_KEY_9 229
+
+static const char* g_offsetPresetNames[] = {
+    "Numpad (1..9)",
+    "Top Row (1..9)",
+    "Letters: QWE / ASD / ZXC",
+    "Letters: UIO / JKL / M,.",
+    "Custom (Edit 9 keys below)"
+};
 
 struct DialogData {
     HotkeyConfig copyHk;
     HotkeyConfig placeHk;
     HotkeyConfig centerHk;
     HotkeyConfig allHk;
+    HotkeyConfig reflectVertHk;
+    HotkeyConfig reflectHorizHk;
     bool selectAfterPaste;
     bool disabled;
+    bool offsetEnabled;
+    UINT offsetMod;
+    UINT offsetMoveMod;
+    int offsetPreset;
+    UINT offsetKeys[10];
     bool saved;
 };
 
 static DialogData g_dlgData;
 static HFONT g_hDlgFont = NULL;
 static bool g_dialogRunning = false;
+static bool g_internalUpdatingEdits = false;
+
+static std::string VkToDisplayChar(UINT vk) {
+    if (vk >= VK_NUMPAD1 && vk <= VK_NUMPAD9) {
+        return std::to_string(vk - VK_NUMPAD1 + 1);
+    }
+    if ((vk >= '0' && vk <= '9') || (vk >= 'A' && vk <= 'Z')) {
+        return std::string(1, (char)vk);
+    }
+    if (vk == VK_OEM_COMMA) return ",";
+    if (vk == VK_OEM_PERIOD) return ".";
+    return std::string(1, (char)vk);
+}
+
+static UINT CharToVkCode(char ch, int preset) {
+    char c = (char)toupper((unsigned char)ch);
+    if (preset == OFFSET_PRESET_NUMPAD && c >= '1' && c <= '9') {
+        return VK_NUMPAD1 + (c - '1');
+    }
+    if (c >= 'A' && c <= 'Z') return (UINT)c;
+    if (c >= '0' && c <= '9') return (UINT)c;
+    if (c == ',') return VK_OEM_COMMA;
+    if (c == '.') return VK_OEM_PERIOD;
+    return (UINT)c;
+}
+
+static void FillPresetKeys(int preset, UINT keys[10]) {
+    switch (preset) {
+        case OFFSET_PRESET_TOPROW:
+            keys[1] = '1'; keys[2] = '2'; keys[3] = '3';
+            keys[4] = '4'; keys[5] = '5'; keys[6] = '6';
+            keys[7] = '7'; keys[8] = '8'; keys[9] = '9';
+            break;
+        case OFFSET_PRESET_QWE_ASD_ZXC:
+            keys[7] = 'Q'; keys[8] = 'W'; keys[9] = 'E';
+            keys[4] = 'A'; keys[5] = 'S'; keys[6] = 'D';
+            keys[1] = 'Z'; keys[2] = 'X'; keys[3] = 'C';
+            break;
+        case OFFSET_PRESET_UIO_JKL_M:
+            keys[7] = 'U'; keys[8] = 'I'; keys[9] = 'O';
+            keys[4] = 'J'; keys[5] = 'K'; keys[6] = 'L';
+            keys[1] = 'M'; keys[2] = VK_OEM_COMMA; keys[3] = VK_OEM_PERIOD;
+            break;
+        case OFFSET_PRESET_NUMPAD:
+        default:
+            keys[1] = VK_NUMPAD1; keys[2] = VK_NUMPAD2; keys[3] = VK_NUMPAD3;
+            keys[4] = VK_NUMPAD4; keys[5] = VK_NUMPAD5; keys[6] = VK_NUMPAD6;
+            keys[7] = VK_NUMPAD7; keys[8] = VK_NUMPAD8; keys[9] = VK_NUMPAD9;
+            break;
+    }
+}
+
+static void UpdateKeyEdits(HWND hDlg) {
+    g_internalUpdatingEdits = true;
+    for (int i = 1; i <= 9; ++i) {
+        HWND hEdit = GetDlgItem(hDlg, IDC_EDIT_OFFSET_KEY_1 + i - 1);
+        if (hEdit) {
+            std::string s = VkToDisplayChar(g_dlgData.offsetKeys[i]);
+            SetWindowTextA(hEdit, s.c_str());
+        }
+    }
+    g_internalUpdatingEdits = false;
+}
 
 static void PopulateCombos(HWND hDlg) {
     HWND hModCopy   = GetDlgItem(hDlg, IDC_MOD_COPY);
@@ -169,9 +391,16 @@ static void PopulateCombos(HWND hDlg) {
     HWND hKeyCenter = GetDlgItem(hDlg, IDC_KEY_CENTER);
     HWND hModAll    = GetDlgItem(hDlg, IDC_MOD_ALL);
     HWND hKeyAll    = GetDlgItem(hDlg, IDC_KEY_ALL);
+    HWND hModReflectVert = GetDlgItem(hDlg, IDC_MOD_REFLECT_VERT);
+    HWND hKeyReflectVert = GetDlgItem(hDlg, IDC_KEY_REFLECT_VERT);
+    HWND hModReflectHoriz = GetDlgItem(hDlg, IDC_MOD_REFLECT_HORIZ);
+    HWND hKeyReflectHoriz = GetDlgItem(hDlg, IDC_KEY_REFLECT_HORIZ);
+    HWND hModOffset = GetDlgItem(hDlg, IDC_MOD_OFFSET);
+    HWND hModOffsetMove = GetDlgItem(hDlg, IDC_MOD_OFFSET_MOVE);
+    HWND hPresetOffset = GetDlgItem(hDlg, IDC_COMBO_OFFSET_PRESET);
 
-    HWND modCombos[] = { hModCopy, hModPlace, hModCenter, hModAll };
-    HWND keyCombos[] = { hKeyCopy, hKeyPlace, hKeyCenter, hKeyAll };
+    HWND modCombos[] = { hModCopy, hModPlace, hModCenter, hModAll, hModReflectVert, hModReflectHoriz, hModOffset, hModOffsetMove };
+    HWND keyCombos[] = { hKeyCopy, hKeyPlace, hKeyCenter, hKeyAll, hKeyReflectVert, hKeyReflectHoriz };
 
     for (HWND mc : modCombos) {
         SendMessage(mc, CB_RESETCONTENT, 0, 0);
@@ -184,6 +413,13 @@ static void PopulateCombos(HWND hDlg) {
         SendMessage(kc, CB_RESETCONTENT, 0, 0);
         for (size_t i = 0; i < sizeof(g_supportedKeys) / sizeof(g_supportedKeys[0]); ++i) {
             SendMessageA(kc, CB_ADDSTRING, 0, (LPARAM)g_supportedKeys[i].name);
+        }
+    }
+
+    if (hPresetOffset) {
+        SendMessage(hPresetOffset, CB_RESETCONTENT, 0, 0);
+        for (size_t i = 0; i < sizeof(g_offsetPresetNames) / sizeof(g_offsetPresetNames[0]); ++i) {
+            SendMessageA(hPresetOffset, CB_ADDSTRING, 0, (LPARAM)g_offsetPresetNames[i]);
         }
     }
 
@@ -219,8 +455,26 @@ static void PopulateCombos(HWND hDlg) {
     selectMod(hModAll, g_dlgData.allHk.modifiers);
     selectKey(hKeyAll, g_dlgData.allHk.vkCode);
 
+    selectMod(hModReflectVert, g_dlgData.reflectVertHk.modifiers);
+    selectKey(hKeyReflectVert, g_dlgData.reflectVertHk.vkCode);
+
+    selectMod(hModReflectHoriz, g_dlgData.reflectHorizHk.modifiers);
+    selectKey(hKeyReflectHoriz, g_dlgData.reflectHorizHk.vkCode);
+
+    selectMod(hModOffset, g_dlgData.offsetMod);
+    selectMod(hModOffsetMove, g_dlgData.offsetMoveMod);
+
+    if (hPresetOffset) {
+        int p = g_dlgData.offsetPreset;
+        if (p < 0 || p > 4) p = 0;
+        SendMessage(hPresetOffset, CB_SETCURSEL, (WPARAM)p, 0);
+    }
+
+    UpdateKeyEdits(hDlg);
+
     CheckDlgButton(hDlg, IDC_CHK_SELECT, g_dlgData.selectAfterPaste ? BST_CHECKED : BST_UNCHECKED);
     CheckDlgButton(hDlg, IDC_CHK_DISABLE, g_dlgData.disabled ? BST_CHECKED : BST_UNCHECKED);
+    CheckDlgButton(hDlg, IDC_CHK_OFFSET, g_dlgData.offsetEnabled ? BST_CHECKED : BST_UNCHECKED);
 }
 
 static LRESULT CALLBACK SettingsDlgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
@@ -282,8 +536,60 @@ static LRESULT CALLBACK SettingsDlgProc(HWND hwnd, UINT msg, WPARAM wParam, LPAR
                     g_dlgData.allHk.vkCode = g_supportedKeys[idxKeyAll].vk;
                 }
 
+                HWND hModReflectVert = GetDlgItem(hwnd, IDC_MOD_REFLECT_VERT);
+                HWND hKeyReflectVert = GetDlgItem(hwnd, IDC_KEY_REFLECT_VERT);
+                int idxModReflectVert = (int)SendMessage(hModReflectVert, CB_GETCURSEL, 0, 0);
+                int idxKeyReflectVert = (int)SendMessage(hKeyReflectVert, CB_GETCURSEL, 0, 0);
+                if (idxModReflectVert >= 0 && idxModReflectVert < (int)(sizeof(g_supportedMods) / sizeof(g_supportedMods[0]))) {
+                    g_dlgData.reflectVertHk.modifiers = g_supportedMods[idxModReflectVert].mod;
+                }
+                if (idxKeyReflectVert >= 0 && idxKeyReflectVert < (int)(sizeof(g_supportedKeys) / sizeof(g_supportedKeys[0]))) {
+                    g_dlgData.reflectVertHk.vkCode = g_supportedKeys[idxKeyReflectVert].vk;
+                }
+
+                HWND hModReflectHoriz = GetDlgItem(hwnd, IDC_MOD_REFLECT_HORIZ);
+                HWND hKeyReflectHoriz = GetDlgItem(hwnd, IDC_KEY_REFLECT_HORIZ);
+                int idxModReflectHoriz = (int)SendMessage(hModReflectHoriz, CB_GETCURSEL, 0, 0);
+                int idxKeyReflectHoriz = (int)SendMessage(hKeyReflectHoriz, CB_GETCURSEL, 0, 0);
+                if (idxModReflectHoriz >= 0 && idxModReflectHoriz < (int)(sizeof(g_supportedMods) / sizeof(g_supportedMods[0]))) {
+                    g_dlgData.reflectHorizHk.modifiers = g_supportedMods[idxModReflectHoriz].mod;
+                }
+                if (idxKeyReflectHoriz >= 0 && idxKeyReflectHoriz < (int)(sizeof(g_supportedKeys) / sizeof(g_supportedKeys[0]))) {
+                    g_dlgData.reflectHorizHk.vkCode = g_supportedKeys[idxKeyReflectHoriz].vk;
+                }
+
                 g_dlgData.selectAfterPaste = (IsDlgButtonChecked(hwnd, IDC_CHK_SELECT) == BST_CHECKED);
                 g_dlgData.disabled = (IsDlgButtonChecked(hwnd, IDC_CHK_DISABLE) == BST_CHECKED);
+                g_dlgData.offsetEnabled = (IsDlgButtonChecked(hwnd, IDC_CHK_OFFSET) == BST_CHECKED);
+
+                HWND hModOffset = GetDlgItem(hwnd, IDC_MOD_OFFSET);
+                int idxModOffset = (int)SendMessage(hModOffset, CB_GETCURSEL, 0, 0);
+                if (idxModOffset >= 0 && idxModOffset < (int)(sizeof(g_supportedMods) / sizeof(g_supportedMods[0]))) {
+                    g_dlgData.offsetMod = g_supportedMods[idxModOffset].mod;
+                }
+
+                HWND hModOffsetMove = GetDlgItem(hwnd, IDC_MOD_OFFSET_MOVE);
+                int idxModOffsetMove = (int)SendMessage(hModOffsetMove, CB_GETCURSEL, 0, 0);
+                if (idxModOffsetMove >= 0 && idxModOffsetMove < (int)(sizeof(g_supportedMods) / sizeof(g_supportedMods[0]))) {
+                    g_dlgData.offsetMoveMod = g_supportedMods[idxModOffsetMove].mod;
+                }
+
+                HWND hPreset = GetDlgItem(hwnd, IDC_COMBO_OFFSET_PRESET);
+                int idxPreset = (int)SendMessage(hPreset, CB_GETCURSEL, 0, 0);
+                if (idxPreset >= 0 && idxPreset <= 4) {
+                    g_dlgData.offsetPreset = idxPreset;
+                }
+
+                for (int i = 1; i <= 9; ++i) {
+                    HWND hEdit = GetDlgItem(hwnd, IDC_EDIT_OFFSET_KEY_1 + i - 1);
+                    if (hEdit) {
+                        char txt[16] = {0};
+                        GetWindowTextA(hEdit, txt, sizeof(txt));
+                        if (txt[0]) {
+                            g_dlgData.offsetKeys[i] = CharToVkCode(txt[0], g_dlgData.offsetPreset);
+                        }
+                    }
+                }
 
                 g_dlgData.saved = true;
                 g_dialogRunning = false;
@@ -299,9 +605,43 @@ static LRESULT CALLBACK SettingsDlgProc(HWND hwnd, UINT msg, WPARAM wParam, LPAR
                 g_dlgData.placeHk = { VK_F6, 0 };
                 g_dlgData.centerHk = { VK_F7, 0 };
                 g_dlgData.allHk = { VK_F8, 0 };
+                g_dlgData.reflectVertHk = { VK_F9, 0 };
+                g_dlgData.reflectHorizHk = { VK_F10, 0 };
                 g_dlgData.selectAfterPaste = true;
                 g_dlgData.disabled = false;
+                g_dlgData.offsetEnabled = true;
+                g_dlgData.offsetMod = MOD_CONTROL;
+                g_dlgData.offsetMoveMod = MOD_ALT;
+                g_dlgData.offsetPreset = OFFSET_PRESET_NUMPAD;
+                FillPresetKeys(OFFSET_PRESET_NUMPAD, g_dlgData.offsetKeys);
                 PopulateCombos(hwnd);
+                return 0;
+            } else if (id == IDC_COMBO_OFFSET_PRESET && HIWORD(wParam) == CBN_SELCHANGE) {
+                HWND hPreset = (HWND)lParam;
+                int idx = (int)SendMessage(hPreset, CB_GETCURSEL, 0, 0);
+                if (idx >= 0 && idx <= 3) {
+                    g_dlgData.offsetPreset = idx;
+                    FillPresetKeys(idx, g_dlgData.offsetKeys);
+                    UpdateKeyEdits(hwnd);
+                } else if (idx == 4) {
+                    g_dlgData.offsetPreset = OFFSET_PRESET_CUSTOM;
+                }
+                return 0;
+            } else if (id >= IDC_EDIT_OFFSET_KEY_1 && id <= IDC_EDIT_OFFSET_KEY_9 && HIWORD(wParam) == EN_CHANGE) {
+                if (!g_internalUpdatingEdits) {
+                    int dir = id - IDC_EDIT_OFFSET_KEY_1 + 1;
+                    HWND hEdit = (HWND)lParam;
+                    char txt[16] = {0};
+                    GetWindowTextA(hEdit, txt, sizeof(txt));
+                    if (txt[0]) {
+                        g_dlgData.offsetKeys[dir] = CharToVkCode(txt[0], OFFSET_PRESET_CUSTOM);
+                        g_dlgData.offsetPreset = OFFSET_PRESET_CUSTOM;
+                        HWND hPreset = GetDlgItem(hwnd, IDC_COMBO_OFFSET_PRESET);
+                        if (hPreset) {
+                            SendMessage(hPreset, CB_SETCURSEL, (WPARAM)OFFSET_PRESET_CUSTOM, 0);
+                        }
+                    }
+                }
                 return 0;
             }
             break;
@@ -320,8 +660,16 @@ static LRESULT CALLBACK SettingsDlgProc(HWND hwnd, UINT msg, WPARAM wParam, LPAR
     return DefWindowProcA(hwnd, msg, wParam, lParam);
 }
 
-static float GetWindowDpiScale(HWND hwnd) {
-    float scale = 1.0f;
+static float GetDialogScale(HWND hwnd) {
+    float aiScale = 1.0f;
+    if (sAIUser && sAIUser->GetAppScaleFactor) {
+        AIReal s = sAIUser->GetAppScaleFactor();
+        if (s >= 0.5f && s <= 5.0f) {
+            aiScale = (float)s;
+        }
+    }
+
+    float winDpiScale = 1.0f;
     if (hwnd) {
         HMODULE hUser32 = GetModuleHandleW(L"user32.dll");
         if (hUser32) {
@@ -329,24 +677,26 @@ static float GetWindowDpiScale(HWND hwnd) {
             GetDpiForWindowProc pGetDpi = (GetDpiForWindowProc)GetProcAddress(hUser32, "GetDpiForWindow");
             if (pGetDpi) {
                 UINT dpi = pGetDpi(hwnd);
-                if (dpi > 0) scale = (float)dpi / 96.0f;
+                if (dpi > 0) winDpiScale = (float)dpi / 96.0f;
             }
         }
-        if (scale <= 1.0f) {
+        if (winDpiScale <= 0.1f) {
             HDC hdc = GetDC(hwnd);
             if (hdc) {
                 int dpi = GetDeviceCaps(hdc, LOGPIXELSY);
                 ReleaseDC(hwnd, hdc);
-                if (dpi > 0) scale = (float)dpi / 96.0f;
+                if (dpi > 0) winDpiScale = (float)dpi / 96.0f;
             }
         }
     }
-    if (scale < 0.75f) scale = 0.75f;
-    if (scale > 4.0f)  scale = 4.0f;
-    return scale;
+
+    float finalScale = (std::max)(aiScale, winDpiScale);
+    if (finalScale < 0.75f) finalScale = 0.75f;
+    if (finalScale > 4.0f)  finalScale = 4.0f;
+    return finalScale;
 }
 
-bool ConfigManager::ShowSettingsDialog(HWND parentHwnd) {
+bool ConfigManager::ShowSettingsDialog(HWND parentHwnd, float currentScale) {
     HINSTANCE hInst = GetModuleHandleA(NULL);
 
     WNDCLASSEXA wc = { 0 };
@@ -365,8 +715,15 @@ bool ConfigManager::ShowSettingsDialog(HWND parentHwnd) {
     g_dlgData.placeHk = m_pastePlaceHotkey;
     g_dlgData.centerHk = m_pasteCenterHotkey;
     g_dlgData.allHk = m_pasteAllArtboardsHotkey;
+    g_dlgData.reflectVertHk = m_reflectVertHotkey;
+    g_dlgData.reflectHorizHk = m_reflectHorizHotkey;
     g_dlgData.selectAfterPaste = m_selectAfterPaste;
     g_dlgData.disabled = m_disabled;
+    g_dlgData.offsetEnabled = m_offsetCloneEnabled;
+    g_dlgData.offsetMod = m_offsetCloneModifier;
+    g_dlgData.offsetMoveMod = m_offsetMoveModifier;
+    g_dlgData.offsetPreset = m_offsetKeyPreset;
+    for (int i = 1; i <= 9; ++i) g_dlgData.offsetKeys[i] = m_offsetKeys[i];
     g_dlgData.saved = false;
 
     // Resolve top-level parent window for true modality
@@ -378,11 +735,14 @@ bool ConfigManager::ShowSettingsDialog(HWND parentHwnd) {
         }
     }
 
-    float scale = GetWindowDpiScale(hOwner);
+    float scale = currentScale;
+    if (scale < 0.75f || scale > 4.0f) {
+        scale = GetDialogScale(parentHwnd ? parentHwnd : hOwner);
+    }
     auto S = [scale](int v) -> int { return (int)(v * scale + 0.5f); };
 
-    int clientW = S(430);
-    int clientH = S(285);
+    int clientW = S(346);
+    int clientH = S(386);
     RECT rc = { 0, 0, clientW, clientH };
     DWORD dwStyle = WS_POPUP | WS_CAPTION | WS_SYSMENU | WS_VISIBLE;
     DWORD dwExStyle = WS_EX_DLGMODALFRAME | WS_EX_TOPMOST;
@@ -417,7 +777,7 @@ bool ConfigManager::ShowSettingsDialog(HWND parentHwnd) {
         DeleteObject(g_hDlgFont);
         g_hDlgFont = NULL;
     }
-    int fontH = -(int)(12.0f * scale + 0.5f);
+    int fontH = -(int)(11.0f * scale + 0.5f);
     g_hDlgFont = CreateFontA(fontH, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
                              DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
                              CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_DONTCARE, "Segoe UI");
@@ -431,58 +791,112 @@ bool ConfigManager::ShowSettingsDialog(HWND parentHwnd) {
 
     auto makeCombo = [&](int cid, int cx, int cy, int cw) {
         HWND h = CreateWindowExA(0, "COMBOBOX", "", WS_CHILD | WS_VISIBLE | CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP,
-                                 cx, cy, cw, S(180), hDlg, (HMENU)(INT_PTR)cid, hInst, NULL);
+                                 cx, cy, cw, S(160), hDlg, (HMENU)(INT_PTR)cid, hInst, NULL);
         SendMessage(h, WM_SETFONT, (WPARAM)g_hDlgFont, TRUE);
-        SendMessageA(h, CB_SETITEMHEIGHT, (WPARAM)-1, (LPARAM)S(22));
-        SendMessageA(h, CB_SETITEMHEIGHT, (WPARAM)0,  (LPARAM)S(20));
+        SendMessageA(h, CB_SETITEMHEIGHT, (WPARAM)-1, (LPARAM)S(20));
+        SendMessageA(h, CB_SETITEMHEIGHT, (WPARAM)0,  (LPARAM)S(18));
         return h;
     };
 
-    addLabel("Configure Hotkeys:", S(18), S(12), S(380), S(20));
+    addLabel("Configure Hotkeys:", S(14), S(10), S(312), S(16));
 
     // Row 1: Copy
-    addLabel("1. Copy to Buffer:", S(18), S(38), S(160), S(22));
-    HWND hModCopy = makeCombo(IDC_MOD_COPY, S(184), S(36), S(116));
-    HWND hKeyCopy = makeCombo(IDC_KEY_COPY, S(308), S(36), S(96));
+    addLabel("1. Copy to Buffer:", S(14), S(32), S(140), S(18));
+    HWND hModCopy = makeCombo(IDC_MOD_COPY, S(158), S(30), S(94));
+    HWND hKeyCopy = makeCombo(IDC_KEY_COPY, S(256), S(30), S(76));
 
     // Row 2: Paste Place
-    addLabel("2. Paste in Place:", S(18), S(68), S(160), S(22));
-    HWND hModPlace = makeCombo(IDC_MOD_PLACE, S(184), S(66), S(116));
-    HWND hKeyPlace = makeCombo(IDC_KEY_PLACE, S(308), S(66), S(96));
+    addLabel("2. Paste in Place:", S(14), S(56), S(140), S(18));
+    HWND hModPlace = makeCombo(IDC_MOD_PLACE, S(158), S(54), S(94));
+    HWND hKeyPlace = makeCombo(IDC_KEY_PLACE, S(256), S(54), S(76));
 
     // Row 3: Paste Center
-    addLabel("3. Paste to Center:", S(18), S(98), S(160), S(22));
-    HWND hModCenter = makeCombo(IDC_MOD_CENTER, S(184), S(96), S(116));
-    HWND hKeyCenter = makeCombo(IDC_KEY_CENTER, S(308), S(96), S(96));
+    addLabel("3. Paste to Center:", S(14), S(80), S(140), S(18));
+    HWND hModCenter = makeCombo(IDC_MOD_CENTER, S(158), S(78), S(94));
+    HWND hKeyCenter = makeCombo(IDC_KEY_CENTER, S(256), S(78), S(76));
 
     // Row 4: Paste on All Artboards
-    addLabel("4. Paste on All Artboards:", S(18), S(128), S(160), S(22));
-    HWND hModAll = makeCombo(IDC_MOD_ALL, S(184), S(126), S(116));
-    HWND hKeyAll = makeCombo(IDC_KEY_ALL, S(308), S(126), S(96));
+    addLabel("4. Paste on All Artboards:", S(14), S(104), S(140), S(18));
+    HWND hModAll = makeCombo(IDC_MOD_ALL, S(158), S(102), S(94));
+    HWND hKeyAll = makeCombo(IDC_KEY_ALL, S(256), S(102), S(76));
+
+    // Row 5: Reflect Vertical
+    addLabel("5. Reflect Vertical:", S(14), S(128), S(140), S(18));
+    HWND hModReflectVert = makeCombo(IDC_MOD_REFLECT_VERT, S(158), S(126), S(94));
+    HWND hKeyReflectVert = makeCombo(IDC_KEY_REFLECT_VERT, S(256), S(126), S(76));
+
+    // Row 6: Reflect Horizontal
+    addLabel("6. Reflect Horizontal:", S(14), S(152), S(140), S(18));
+    HWND hModReflectHoriz = makeCombo(IDC_MOD_REFLECT_HORIZ, S(158), S(150), S(94));
+    HWND hKeyReflectHoriz = makeCombo(IDC_KEY_REFLECT_HORIZ, S(256), S(150), S(76));
+
+    // Row 7: Pattern Offset Checkbox (renamed to 7.)
+    HWND hChkOffset = CreateWindowExA(0, "BUTTON", "7. Pattern Offset (Hotkeys):",
+                                      WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX | WS_TABSTOP,
+                                      S(14), S(174), S(312), S(18), hDlg, (HMENU)IDC_CHK_OFFSET, hInst, NULL);
+    SendMessage(hChkOffset, WM_SETFONT, (WPARAM)g_hDlgFont, TRUE);
+
+    // Row 8: Clone modifier (left) & Preset dropdown (right)
+    addLabel("Clone:", S(24), S(196), S(42), S(18));
+    HWND hModOffset = makeCombo(IDC_MOD_OFFSET, S(68), S(194), S(88));
+
+    addLabel("Keys:", S(164), S(196), S(34), S(18));
+    HWND hPresetOffset = makeCombo(IDC_COMBO_OFFSET_PRESET, S(200), S(194), S(132));
+
+    // Row 9: Move modifier (left)
+    addLabel("Move:", S(24), S(222), S(42), S(18));
+    HWND hModOffsetMove = makeCombo(IDC_MOD_OFFSET_MOVE, S(68), S(220), S(88));
+
+    // Keypad Layout (3x3 Matrix)
+    addLabel("Direction Keys:\n(3x3 Matrix)", S(24), S(248), S(160), S(36));
+
+    int gridDirs[3][3] = {
+        { 7, 8, 9 },
+        { 4, 5, 6 },
+        { 1, 2, 3 }
+    };
+    int editW = S(38);
+    int editH = S(20);
+    int editGap = S(4);
+    int gridStartX = S(200);
+    int gridStartY = S(220);
+
+    for (int r = 0; r < 3; ++r) {
+        int ey = gridStartY + r * (editH + editGap);
+        for (int c = 0; c < 3; ++c) {
+            int dir = gridDirs[r][c];
+            int ex = gridStartX + c * (editW + editGap);
+            HWND hEdit = CreateWindowExA(WS_EX_CLIENTEDGE, "EDIT", "",
+                                         WS_CHILD | WS_VISIBLE | WS_TABSTOP | ES_CENTER | ES_UPPERCASE,
+                                         ex, ey, editW, editH, hDlg, (HMENU)(INT_PTR)(IDC_EDIT_OFFSET_KEY_1 + dir - 1), hInst, NULL);
+            SendMessage(hEdit, WM_SETFONT, (WPARAM)g_hDlgFont, TRUE);
+            SendMessage(hEdit, EM_SETLIMITTEXT, 4, 0);
+        }
+    }
 
     // Checkbox 1: Select object(s) after paste
     HWND hChkSelect = CreateWindowExA(0, "BUTTON", "Select object(s) after paste",
                                       WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX | WS_TABSTOP,
-                                      S(18), S(162), S(380), S(20), hDlg, (HMENU)IDC_CHK_SELECT, hInst, NULL);
+                                      S(14), S(296), S(312), S(18), hDlg, (HMENU)IDC_CHK_SELECT, hInst, NULL);
     SendMessage(hChkSelect, WM_SETFONT, (WPARAM)g_hDlgFont, TRUE);
 
     // Checkbox 2: Disable plugin (ignore hotkeys)
     HWND hChkDisable = CreateWindowExA(0, "BUTTON", "Disable plugin (ignore hotkeys)",
                                        WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX | WS_TABSTOP,
-                                       S(18), S(187), S(380), S(20), hDlg, (HMENU)IDC_CHK_DISABLE, hInst, NULL);
+                                       S(14), S(318), S(312), S(18), hDlg, (HMENU)IDC_CHK_DISABLE, hInst, NULL);
     SendMessage(hChkDisable, WM_SETFONT, (WPARAM)g_hDlgFont, TRUE);
 
     // Bottom buttons (strictly in English)
     HWND hBtnDefaults = CreateWindowExA(0, "BUTTON", "Defaults", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON | WS_TABSTOP,
-                                        S(18), S(226), S(90), S(26), hDlg, (HMENU)IDC_BTN_DEFAULTS, hInst, NULL);
+                                        S(14), S(350), S(70), S(24), hDlg, (HMENU)IDC_BTN_DEFAULTS, hInst, NULL);
     SendMessage(hBtnDefaults, WM_SETFONT, (WPARAM)g_hDlgFont, TRUE);
 
     HWND hBtnOk = CreateWindowExA(0, "BUTTON", "Save", WS_CHILD | WS_VISIBLE | BS_DEFPUSHBUTTON | WS_TABSTOP,
-                                  S(228), S(226), S(88), S(26), hDlg, (HMENU)IDC_BTN_OK, hInst, NULL);
+                                  S(194), S(350), S(66), S(24), hDlg, (HMENU)IDC_BTN_OK, hInst, NULL);
     SendMessage(hBtnOk, WM_SETFONT, (WPARAM)g_hDlgFont, TRUE);
 
     HWND hBtnCancel = CreateWindowExA(0, "BUTTON", "Cancel", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON | WS_TABSTOP,
-                                      S(324), S(226), S(80), S(26), hDlg, (HMENU)IDC_BTN_CANCEL, hInst, NULL);
+                                      S(266), S(350), S(66), S(24), hDlg, (HMENU)IDC_BTN_CANCEL, hInst, NULL);
     SendMessage(hBtnCancel, WM_SETFONT, (WPARAM)g_hDlgFont, TRUE);
 
     PopulateCombos(hDlg);
@@ -537,8 +951,15 @@ bool ConfigManager::ShowSettingsDialog(HWND parentHwnd) {
         m_pastePlaceHotkey = g_dlgData.placeHk;
         m_pasteCenterHotkey = g_dlgData.centerHk;
         m_pasteAllArtboardsHotkey = g_dlgData.allHk;
+        m_reflectVertHotkey = g_dlgData.reflectVertHk;
+        m_reflectHorizHotkey = g_dlgData.reflectHorizHk;
         m_selectAfterPaste = g_dlgData.selectAfterPaste;
         m_disabled = g_dlgData.disabled;
+        m_offsetCloneEnabled = g_dlgData.offsetEnabled;
+        m_offsetCloneModifier = g_dlgData.offsetMod;
+        m_offsetMoveModifier = g_dlgData.offsetMoveMod;
+        m_offsetKeyPreset = g_dlgData.offsetPreset;
+        for (int i = 1; i <= 9; ++i) m_offsetKeys[i] = g_dlgData.offsetKeys[i];
         Save();
         return true;
     }

@@ -16,6 +16,7 @@ tools/**/*.user
 # Native C++ Plugin build artifacts
 native-plugin/build/
 native-plugin/Build_DEV/
+native-plugin/ClipboardPaste_v*.aip
 *.obj
 *.lib
 *.exp

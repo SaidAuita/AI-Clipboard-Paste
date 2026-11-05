@@ -53,28 +53,12 @@ if errorlevel 1 (
 echo  [OK] Resource compiled.
 echo.
 
-:: 4. Compile and Link C++ .aip (DLL x64) using Adobe Illustrator SDK
-if not defined SDK_ROOT (
-    if defined ILLUSTRATOR_SDK (
-        set "SDK_ROOT=%ILLUSTRATOR_SDK%"
-    ) else if exist "c:\_CODE\illustrator\SDK\AI_2026_SDK_Win\Adobe Illustrator 2026 SDK" (
-        set "SDK_ROOT=c:\_CODE\illustrator\SDK\AI_2026_SDK_Win\Adobe Illustrator 2026 SDK"
-    ) else if exist "%~dp0..\..\SDK\AI_2026_SDK_Win\Adobe Illustrator 2026 SDK" (
-        set "SDK_ROOT=%~dp0..\..\SDK\AI_2026_SDK_Win\Adobe Illustrator 2026 SDK"
-    )
-)
-
-if not exist "%SDK_ROOT%" (
-    echo [ERROR] Adobe Illustrator SDK directory not found!
-    echo Please set ILLUSTRATOR_SDK environment variable to the SDK root folder.
-    pause
-    exit /b 1
-)
-
+:: 4. Compile and Link C++ .aip (DLL x64) using Adobe Illustrator 2026 SDK
+set "SDK_ROOT=c:\_CODE\illustrator\SDK\AI_2026_SDK_Win\Adobe Illustrator 2026 SDK"
 set "SDK_INCLUDES=/I"%SDK_ROOT%\illustratorapi\illustrator" /I"%SDK_ROOT%\illustratorapi\illustrator\actions" /I"%SDK_ROOT%\illustratorapi\pica_sp" /I"%SDK_ROOT%\illustratorapi\ate" /I"%SDK_ROOT%\samplecode\common\includes""
 
 echo [*] Compiling C++ source files into ClipboardPaste.aip...
-cl.exe /nologo /std:c++17 /O2 /MD /EHsc /W3 /LD ^
+cl.exe /nologo /std:c++17 /utf-8 /wd4828 /O2 /MD /EHsc /W3 /LD ^
     /DWIN_ENV=1 /DWIN32 /D_WINDOWS ^
     %SDK_INCLUDES% ^
     "src\PluginMain.cpp" ^

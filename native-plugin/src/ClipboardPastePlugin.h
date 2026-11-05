@@ -23,6 +23,9 @@ public:
 
     void UpdateUI();
     void UpdateButtonsText();
+    void SwitchTab(int tabIndex);
+    int GetActiveTab() const { return m_activeTab; }
+    void UpdateOffsetUI(int lastDir = 0, bool isMove = false);
 
 private:
     ClipboardPastePlugin();
@@ -36,6 +39,7 @@ private:
     SPPluginRef       m_pluginRef;
     AIPanelRef        m_panelRef;
     HWND              m_hPanelDlg;
+    int               m_activeTab;
     AINotifierHandle  m_hBrightnessNotifier;
 
     AIMenuItemHandle  m_hMenuWindow;
@@ -43,6 +47,8 @@ private:
     AIMenuItemHandle  m_hMenuPasteInPlace;
     AIMenuItemHandle  m_hMenuPasteCenter;
     AIMenuItemHandle  m_hMenuPasteAllArtboards;
+    AIMenuItemHandle  m_hMenuReflectVert;
+    AIMenuItemHandle  m_hMenuReflectHoriz;
     AIMenuItemHandle  m_hMenuClear;
     AIMenuItemHandle  m_hMenuAbout;
 };

@@ -106,24 +106,50 @@ To diagnose this issue systematically, a low-level diagnostic monitor — **[AI-
 
 ---
 
-### 🌟 1. Native C++ Plugin (.aip) — The Recommended Experience
+### 🌟 1. Native C++ Plugin (.aip) — The Recommended Experience (v1.25)
 
-The **Native C++ Plugin** is the primary, most streamlined way to use Clipboard Paste in Adobe Illustrator CC 2020 – 2026+:
+The **Native C++ Plugin** is the primary, fastest, and most capable tool for instant vector duplication and transformation in Adobe Illustrator CC 2020 – 2026+:
 
 <p align="center">
-  <img src="images/Clipboard Paste Plugin_01.png" alt="Native C++ Dockable Panel in Illustrator Dark Theme" width="290">
-  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-  <img src="images/Clipboard Paste Plugin_02.png" alt="Native C++ Hotkey & Preferences Dialog" width="350">
+  <img src="images/Clipboard Paste Plugin_01.png" alt="Clipboard Tab: Copy, Paste, and Quick Reflect" width="270">
+  &nbsp;&nbsp;
+  <img src="images/Clipboard Paste Plugin_02.png" alt="Offset Clone Tab: Pattern and Pixel Art Creation" width="270">
+  &nbsp;&nbsp;
+  <img src="images/Clipboard Paste Plugin_03.png" alt="Preferences Dialog" width="350">
 </p>
 
-* **🔥 Hotkeys Work Instantly Out of the Box:** Press `F5` (Copy to Buffer), `F6` (Paste In Place), or `F7` (Paste to Center) at any time. Keystrokes are captured globally without needing to click the panel or switch focus!
-* **🚫 Zero Extra Panels or Visual Flashes:** Unlike the CEP extension (which had to briefly spawn micro-panels to execute commands), the native plugin runs directly inside `Illustrator.exe` thread memory. No popups, no focus-stealing, no screen blinking.
-* **🎨 100% Native Illustrator Theme Adaptation:** Fully custom-rendered dockable palette with 3px rounded buttons matching Illustrator's native Properties panel (`Edit Artboards`). Dynamically matches all 4 UI brightness themes (Dark, Medium Dark, Medium Light, Light).
-* **⚙️ In-Panel Preferences Dialog:** Click **Settings...** to remap any function key (`F1`–`F12`, `Alt+...`, `Ctrl+...`) and toggle the *"Select object(s) after paste"* option.
+* **🔥 Hotkeys Work Instantly Out of the Box:**
+  - `F5` — In-Place Copy to Buffer.
+  - `F6` — In-Place Paste.
+  - `F7` — Paste to Center of View.
+  - `F8` — Paste on All Artboards.
+  - `F9` — Reflect Vertical (flip left <-> right, $x = cx$).
+  - `F10` — Reflect Horizontal (flip top <-> bottom, $y = cy$).
+  - `Ctrl + Numpad [1..9]` — Pattern Offset Clone (clone selection by exact dimensions).
+  - `Alt + Numpad [1..9]` — Pattern Offset Move (shift selection by exact dimensions without duplicating).
+  Keystrokes are captured globally at process level without needing to click the panel or switch focus!
+
+* **🎯 Rapid Pattern, Pixel Art & Grid Creation (Tab «Offset Clone»):**
+  - **The Native Illustrator Problem:** To duplicate a tile or modular asset by its exact width/height, designers traditionally had to open `Object ➔ Transform ➔ Move...` (`Shift+Ctrl+M`), calculate or check dimensions in points/pixels, type values into Horizontal/Vertical inputs, click "Copy", and press `Ctrl+D`. This was slow, tedious, and broke focus when building grids, isometric art, and vector patterns.
+  - **The Solution:** The plugin measures selected artwork dimensions in real time (`Selection: W x H pt`). Hold **`Ctrl`** and press any direction key on your keypad **`1..9`** (or click the 3x3 grid) — the object is instantly duplicated edge-to-edge by its exact bounding box (including the 4 diagonal corners: `7` NW, `9` NE, `1` SW, `3` SE).
+  - **Real-Time Pattern Drawing:** Repeatedly tapping or holding direction keys (e.g., `Ctrl+Num6`, `Ctrl+Num6`, `Ctrl+Num2`) lets you build seamless tile patterns, tessellations, and pixel graphics in seconds — with pixel-brush speed but retaining pure vector geometry!
+  - **Move Mode (`Alt`):** Hold **`Alt + [1..9]`** to shift the artwork by its exact size without creating duplicates.
+  - **Laptop Friendly:** For keyboards without a physical Numpad, open **Settings...** to switch to the top number row `1..9`, letter grids `QWE / ASD / ZXC`, `UIO / JKL / M`, or configure custom keys.
+
+* **🪞 Instant Hotkey Reflection (Reflect Vertical / Horizontal):**
+  - Single-key reflection via `F9` (Vertical axis, flip left/right) and `F10` (Horizontal axis, flip top/bottom) centered on the selection bounds. No need to reach for the Reflect tool `(O)` or transform submenus.
+
+* **🛡️ Critical Stability Fix (Crash Resolution for Complex Artwork):**
+  - Fixed an Illustrator crash that could occur when pasting complex artwork (Compound Paths, Clipping Masks, grouped objects with appearance styles).
+  - *Root Cause:* Selection flags were previously propagated recursively down to individual sub-paths inside compound shapes, corrupting Illustrator's internal object tree and crashing `StrokeOffset.aip` on redraw.
+  - *Resolution:* Selection is now applied safely at the container root according to Adobe SDK guidelines, and the `CopyScope` lifecycle is strictly isolated.
+
+* **🎨 100% Native Illustrator Theme Adaptation:** Fully custom-rendered dockable palette matching Illustrator's native Properties panel with 3px rounded buttons. Dynamically matches all 4 UI brightness themes.
+* **⚙️ In-Panel Preferences Dialog (7 Sections):** Click **Settings...** to remap hotkeys (`F1`–`F12`, `Alt+...`, `Ctrl+...`), select matrix key presets, choose Clone/Move modifiers, or toggle disable mode.
 
 #### Quick Native Plugin Installation:
-1. Download the installer archive: [**Clipboard_Paste_Plugin_v1.15.zip**](https://github.com/SaidAuita/AI-Clipboard-Paste/releases/download/v1.15/Clipboard_Paste_Plugin_v1.15.zip) (or get it from [`native-plugin/`](native-plugin/)).
-2. Extract the archive and run **`Install_Plugin.bat`** (it automatically detects all installed Illustrator versions 2020..2026+ and copies `ClipboardPaste.aip`).
+1. Download the installer archive: [**Clipboard_Paste_Plugin_v1.25.zip**](https://github.com/SaidAuita/AI-Clipboard-Paste/releases/download/v1.25/Clipboard_Paste_Plugin_v1.25.zip) (or get it from [`native-plugin/`](native-plugin/)).
+2. Extract the archive and run **`Install_Plugin.bat`** (automatically detects all installed Illustrator versions 2020..2026+ and copies `ClipboardPaste.aip`).
 3. Launch Adobe Illustrator and open **Window ➔ Clipboard Paste**.
 
 ---
@@ -375,23 +401,50 @@ Run `Uninstall.bat` to cleanly remove the extension from Adobe CEP without affec
 
 ---
 
-### 🌟 1. Нативный C++ плагин (.aip) — Приоритетная версия
+### 🌟 1. Нативный C++ плагин (.aip) — Приоритетная версия (v1.25)
 
-**Нативный C++ плагин** — это самый быстрый, чистый и комфортный способ работы в Adobe Illustrator CC 2020 – 2026+:
+**Нативный C++ плагин** — это самый быстрый, чистый и многофункциональный инструмент прямого дублирования и трансформации объектов в Adobe Illustrator CC 2020 – 2026+:
 
 <p align="center">
-  <img src="images/Clipboard Paste Plugin_01.png" alt="Нативная палитра Clipboard Paste в тёмной теме Illustrator" width="290">
-  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-  <img src="images/Clipboard Paste Plugin_02.png" alt="Настройки горячих клавиш нативного плагина" width="350">
+  <img src="images/Clipboard Paste Plugin_01.png" alt="Вкладка Clipboard: копирование, вставка и быстрое отражение" width="270">
+  &nbsp;&nbsp;
+  <img src="images/Clipboard Paste Plugin_02.png" alt="Вкладка Offset Clone: создание узоров и пиксельной графики" width="270">
+  &nbsp;&nbsp;
+  <img src="images/Clipboard Paste Plugin_03.png" alt="Диалог настроек горячих клавиш (Preferences)" width="350">
 </p>
 
-* **🔥 Горячие клавиши работают из коробки:** Нажимайте `F5` (копировать в буфер), `F6` (вставить на место) или `F7` (вставить в центр экрана) в любой момент. Плагин перехватывает нажатия глобально без необходимости кликать мышью по палитре или переключать фокус!
-* **🚫 Никаких всплывающих микро-панелей и морганий:** В отличие от CEP-версии, которой для перехвата сочетаний клавиш требовалось на доли секунды открывать вспомогательные HTML-окна (`cp_copy`, `cp_place`), нативный плагин работает напрямую в адресном пространстве процесса `Illustrator.exe`. Никаких мелькающих окон на экране.
+* **🔥 Горячие клавиши работают из коробки:**
+  - `F5` — мгновенно скопировать выделение во внутренний изолированный буфер памяти.
+  - `F6` — вставить на то же место (*In Place*).
+  - `F7` — вставить точно по центру текущего экрана (*Center of View*).
+  - `F8` — размножить сразу на все артборды макета (*Paste on All Artboards*).
+  - `F9` — быстрое зеркальное отражение по вертикали (*Reflect Vertical*, $x = cx$).
+  - `F10` — быстрое зеркальное отражение по горизонтали (*Reflect Horizontal*, $y = cy$).
+  - `Ctrl + Numpad [1..9]` — клонирование со смещением ровно на размер объекта (*Pattern Offset Clone*).
+  - `Alt + Numpad [1..9]` — сдвиг выделения без дублирования на размер объекта (*Pattern Offset Move*).
+  Плагин перехватывает нажатия глобально на уровне процесса без необходимости кликать мышью по палитре или переключать фокус!
+
+* **🎯 Скоростное создание узоров, пиксель-арта и паттернов (Вкладка «Offset Clone»):**
+  - **Проблема классического Illustrator:** Чтобы размножить плитку, модуль или элемент узора со смещением ровно на его ширину или высоту, дизайнеру приходилось каждый раз открывать окно `Object ➔ Transform ➔ Move...` (`Shift+Ctrl+M`), смотреть или высчитывать размеры в точках/пикселях, вручную вбивать значения `Horizontal`/`Vertical`, нажимать `Copy`, затем `Ctrl+D`. Это отнимало много времени, сбивало творческий ритм и утомляло при сборке изометрии, бесшовных паттернов и пиксельной векторной графики.
+  - **Решение в плагине:** Плагин в реальном времени замеряет габариты выделенного объекта (`Selection: W x H pt`). Зажмите **`Ctrl`** и нажимайте клавиши стрелок или цифрового кейпада **`1..9`** (или кликайте по 3x3 матрице на панели) — объект моментально дублируется стык-в-стык ровно на свой точный габарит в выбранном направлении (включая 4 диагональных угла: `7` — влево-вверх, `9` — вправо-вверх, `1` — влево-вниз, `3` — вправо-вниз).
+  - **Рисование узоров «на лету»:** Удерживая клавишу или быстро нажимая комбинацию (например, `Ctrl+Num6`, `Ctrl+Num6`, `Ctrl+Num2`), вы выстраиваете непрерывные ряды плитки, геометрические орнаменты, кирпичные кладки или изометрические пиксельные иллюстрации за секунды — со скоростью пиксельной кисти, но в чистом редактируемом векторе!
+  - **Режим перемещения (`Alt`):** Если требуется сдвинуть объект без создания дубликата, зажмите **`Alt + [1..9]`** — объект сделает дискретный шаг на свой размер, сохраняя выделение.
+  - **Специально для ноутбуков:** Если у вас клавиатура без отдельного блока Numpad, в настройках (`Settings...`) можно в один клик переключиться на стандартный верхний ряд цифр `1..9`, раскладку букв `QWE / ASD / ZXC`, `UIO / JKL / M` или настроить любые удобные клавиши.
+
+* **🪞 Мгновенное отражение по хоткеям (Reflect Vertical / Horizontal):**
+  - Клавиши `F9` (Reflect Vertical, зеркалирование лево/право) и `F10` (Reflect Horizontal, зеркалирование верх/низ) отражают выделенные объекты относительно их геометрического центра.
+  - Больше не нужно выбирать инструмент `Reflect Tool (O)` на панели инструментов или заходить в контекстные диалоги. В связке с Offset Clone это позволяет мгновенно генерировать зеркально-симметричные орнаменты и розетки.
+
+* **🛡️ Исправление критического бага стабильности (Crash Fix):**
+  - Устранена ошибка, приводившая к падению Illustrator при копировании и вставке сложных векторных объектов (составных контуров / Compound Paths, обтравочных масок / Clipping Masks, сгруппированных объектов с эффектами оформления).
+  - *Причина сбоя:* Ранее при включенной опции автовыделения после вставки флаги выделения рекурсивно накладывались на внутренние подконтуры составных путей, что нарушало целостность графа объектов в памяти и вызывало падение встроенного модуля `StrokeOffset.aip` при последующей перерисовке (`RedrawDocument`).
+  - *Исправление:* Выделение теперь устанавливается строго по стандартам Adobe SDK на верхний уровень контейнеров, а контекст `CopyScope` изолирован, гарантируя полную стабильность на самых тяжёлых макетах.
+
 * **🎨 Нативное оформление и поддержка всех тем:** Палитра повторяет дизайн стандартных кнопок палитры *Свойства (Properties)* со скруглением 3px и автоматически перерисовывается под текущую тему Illustrator (тёмная, средне-тёмная, средне-светлая, светлая).
-* **⚙️ Графический диалог настроек:** Кнопка **Settings...** открывает окно переназначения любых клавиш (`F1`–`F12`, `Alt+...`, `Ctrl+...`) и переключатель опции автоматического выделения объектов после вставки (*Select object(s) after paste*).
+* **⚙️ Графический диалог настроек (7 разделов):** Кнопка **Settings...** открывает окно переназначения любых клавиш (`F1`–`F12`, `Alt+...`, `Ctrl+...`), выбор пресета матрицы смещения, раздельный выбор модификаторов для Clone/Move, включение/отключение плагина и опцию автовыделения объектов (*Select object(s) after paste*).
 
 #### Быстрая установка нативного плагина:
-1. Скачайте архив установщика: [**Clipboard_Paste_Plugin_v1.15.zip**](https://github.com/SaidAuita/AI-Clipboard-Paste/releases/download/v1.15/Clipboard_Paste_Plugin_v1.15.zip) (или возьмите файлы из папки [`native-plugin/`](native-plugin/)).
+1. Скачайте архив установщика: [**Clipboard_Paste_Plugin_v1.25.zip**](https://github.com/SaidAuita/AI-Clipboard-Paste/releases/download/v1.25/Clipboard_Paste_Plugin_v1.25.zip) (или возьмите файлы из папки [`native-plugin/`](native-plugin/)).
 2. Распакуйте и запустите **`Install_Plugin.bat`** (инсталлятор автоматически обнаружит все установленные версии Illustrator 2020..2026+ и скопирует файл `ClipboardPaste.aip`).
 3. Запустите Adobe Illustrator — палитра ждёт вас в меню **Окно ➔ Clipboard Paste** (Window ➔ Clipboard Paste).
 

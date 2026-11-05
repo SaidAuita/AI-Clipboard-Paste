@@ -5,30 +5,13 @@
 #include <cmath>
 #include <algorithm>
 
-void BufferManager::SelectArtRecursive(AIArtHandle art, bool select) {
+void BufferManager::SelectArt(AIArtHandle art, bool select) {
     if (!art || !sAIArt) return;
-
-    ai::int32 attr = select ? (kArtSelected | kArtFullySelected) : 0;
-    ai::int32 mask = kArtSelected | kArtFullySelected;
-    sAIArt->SetArtUserAttr(art, mask, attr);
-
-    short type = 0;
-    if (sAIArt->GetArtType(art, &type) == kNoErr) {
-        if (type == kGroupArt || type == kCompoundPathArt) {
-            AIArtHandle child = nullptr;
-            if (sAIArt->GetArtFirstChild(art, &child) == kNoErr) {
-                while (child) {
-                    SelectArtRecursive(child, select);
-                    AIArtHandle next = nullptr;
-                    if (sAIArt->GetArtSibling(child, &next) == kNoErr) {
-                        child = next;
-                    } else {
-                        break;
-                    }
-                }
-            }
-        }
-    }
+    ai::int32 attr = select ? kArtSelected : 0;
+    // According to Adobe Illustrator SDK (AIArt.h), passing kArtSelected to SetArtUserAttr
+    // fully selects any object including containers (groups, compound paths).
+    // Sub-elements must not be manually selected to avoid corrupting compound paths and clip masks.
+    sAIArt->SetArtUserAttr(art, kArtSelected, attr);
 }
 
 BufferManager& BufferManager::GetInstance() {
@@ -134,9 +117,8 @@ void BufferManager::CalculateTotalBounds(const std::vector<AIArtHandle>& items, 
     }
 }
 
-void BufferManager::OffsetArt(AIArtHandle art, double dx, double dy) {
-    if (!sAIArt || !sAITransformArt || (std::abs(dx) < 1e-6 && std::abs(dy) < 1e-6)) return;
-    if (!art) return;
+void BufferManager::TransformArtRecursive(AIArtHandle art, const AIRealMatrix& matrix) {
+    if (!sAIArt || !sAITransformArt || !art) return;
 
     short type = 0;
     if (sAIArt->GetArtType(art, &type) != kNoErr) return;
@@ -146,7 +128,7 @@ void BufferManager::OffsetArt(AIArtHandle art, double dx, double dy) {
         AIArtHandle child = nullptr;
         if (sAIArt->GetArtFirstChild(art, &child) == kNoErr) {
             while (child) {
-                OffsetArt(child, dx, dy);
+                TransformArtRecursive(child, matrix);
                 AIArtHandle next = nullptr;
                 if (sAIArt->GetArtSibling(child, &next) == kNoErr) {
                     child = next;
@@ -158,6 +140,17 @@ void BufferManager::OffsetArt(AIArtHandle art, double dx, double dy) {
         return;
     }
 
+    ai::int32 flags = kTransformObjects | kTransformChildren | kTransformEntireArtStyle;
+    AIErr transErr = sAITransformArt->TransformArt(art, const_cast<AIRealMatrix*>(&matrix), 1.0, flags);
+    if (transErr != kNoErr) {
+        PluginLog("  [TransformArtRecursive WARN] TransformArt err=%d for art %p (type=%d)", transErr, art, type);
+    }
+}
+
+void BufferManager::OffsetArt(AIArtHandle art, double dx, double dy) {
+    if (std::abs(dx) < 1e-6 && std::abs(dy) < 1e-6) return;
+    if (!art) return;
+
     AIRealMatrix matrix;
     matrix.a = 1.0;
     matrix.b = 0.0;
@@ -166,11 +159,7 @@ void BufferManager::OffsetArt(AIArtHandle art, double dx, double dy) {
     matrix.tx = dx;
     matrix.ty = dy;
 
-    ai::int32 flags = kTransformObjects | kTransformChildren | kTransformEntireArtStyle;
-    AIErr transErr = sAITransformArt->TransformArt(art, &matrix, 1.0, flags);
-    if (transErr != kNoErr) {
-        PluginLog("  [OffsetArt WARN] TransformArt err=%d for art %p (type=%d)", transErr, art, type);
-    }
+    TransformArtRecursive(art, matrix);
 }
 
 bool BufferManager::CopySelection() {
@@ -423,10 +412,15 @@ bool BufferManager::PasteInPlace() {
         }
     }
 
+    // Завершаем транзакцию CopyScope до выделения и перерисовки
+    copyScope.Terminate(std::nothrow);
+
     // Применяем выделение к вставленным объектам (согласно настройкам)
     bool selectAfter = ConfigManager::GetInstance().GetSelectAfterPaste();
-    for (AIArtHandle item : newItems) {
-        SelectArtRecursive(item, selectAfter);
+    if (selectAfter) {
+        for (AIArtHandle item : newItems) {
+            SelectArt(item, true);
+        }
     }
 
     sAIDocument->RedrawDocument();
@@ -509,9 +503,13 @@ bool BufferManager::PasteCenter() {
     }
 
     if (newItems.empty()) {
+        copyScope.Terminate(std::nothrow);
         PluginLog("[PasteCenter FAIL] No items could be duplicated");
         return false;
     }
+
+    // Завершаем транзакцию CopyScope до смещения, выделения и перерисовки
+    copyScope.Terminate(std::nothrow);
 
     // 4. Определяем актуальный центр области просмотра (Viewport Center) целевого документа
     AIRealPoint viewCenter = {0.0, 0.0};
@@ -572,8 +570,10 @@ bool BufferManager::PasteCenter() {
 
     // 7. Применяем выделение к вставленным объектам (согласно настройкам)
     bool selectAfter = ConfigManager::GetInstance().GetSelectAfterPaste();
-    for (AIArtHandle item : newItems) {
-        SelectArtRecursive(item, selectAfter);
+    if (selectAfter) {
+        for (AIArtHandle item : newItems) {
+            SelectArt(item, true);
+        }
     }
 
     sAIDocument->RedrawDocument();
@@ -700,10 +700,15 @@ bool BufferManager::PasteAllArtboards() {
         }
     }
 
+    // Завершаем транзакцию CopyScope до выделения и перерисовки
+    copyScope.Terminate(std::nothrow);
+
     // Применяем выделение к вставленным объектам (согласно настройкам)
     bool selectAfter = ConfigManager::GetInstance().GetSelectAfterPaste();
-    for (AIArtHandle item : allNewItems) {
-        SelectArtRecursive(item, selectAfter);
+    if (selectAfter) {
+        for (AIArtHandle item : allNewItems) {
+            SelectArt(item, true);
+        }
     }
 
     sAIDocument->RedrawDocument();
@@ -711,4 +716,350 @@ bool BufferManager::PasteAllArtboards() {
               allNewItems.size(), artboards.size(), isSameDoc);
     return !allNewItems.empty();
 }
+
+bool BufferManager::GetSelectionDimensions(double& outW, double& outH) {
+    outW = 0.0;
+    outH = 0.0;
+    if (!sAIMatchingArt || !sAIArt || !sAIDocument) return false;
+
+    AIDocumentHandle doc = nullptr;
+    if (sAIDocument->GetDocument(&doc) != kNoErr || !doc) return false;
+
+    AIArtHandle** matches = nullptr;
+    ai::int32 count = 0;
+    if (sAIMatchingArt->GetSelectedArt(&matches, &count) != kNoErr || count <= 0 || !matches || !(*matches)) {
+        return false;
+    }
+
+    std::vector<AIArtHandle> rawList;
+    rawList.reserve(count);
+    for (ai::int32 i = 0; i < count; ++i) {
+        AIArtHandle h = (*matches)[i];
+        if (h) rawList.push_back(h);
+    }
+    if (sAIMdMemory) {
+        sAIMdMemory->MdMemoryDisposeHandle((AIMdMemoryHandle)matches);
+    }
+
+    std::vector<AIArtHandle> topArts;
+    for (AIArtHandle h : rawList) {
+        if (!IsLayerArt(h) && !HasSelectedAncestor(h, rawList)) {
+            topArts.push_back(h);
+        }
+    }
+    if (topArts.empty()) return false;
+
+    AIRealRect bounds = {0};
+    CalculateTotalBounds(topArts, bounds);
+    outW = std::abs(bounds.right - bounds.left);
+    outH = std::abs(bounds.top - bounds.bottom);
+    return true;
+}
+
+bool BufferManager::CloneSelectionWithOffset(int direction, double gap) {
+    if (!sAIMatchingArt || !sAIArt || !sAIDocument || !sAITransformArt) {
+        PluginLog("[CloneSelectionWithOffset FAIL] Suites not acquired!");
+        return false;
+    }
+
+    AIDocumentHandle doc = nullptr;
+    if (sAIDocument->GetDocument(&doc) != kNoErr || !doc) {
+        PluginLog("[CloneSelectionWithOffset FAIL] No active document");
+        return false;
+    }
+
+    AIArtHandle** matches = nullptr;
+    ai::int32 count = 0;
+    AIErr err = sAIMatchingArt->GetSelectedArt(&matches, &count);
+    if (err != kNoErr || count <= 0 || !matches || !(*matches)) {
+        PluginLog("[CloneSelectionWithOffset] Nothing selected");
+        return false;
+    }
+
+    std::vector<AIArtHandle> rawList;
+    rawList.reserve(count);
+    for (ai::int32 i = 0; i < count; ++i) {
+        AIArtHandle h = (*matches)[i];
+        if (h) rawList.push_back(h);
+    }
+    if (sAIMdMemory) {
+        sAIMdMemory->MdMemoryDisposeHandle((AIMdMemoryHandle)matches);
+    }
+
+    std::vector<AIArtHandle> topArts;
+    for (AIArtHandle h : rawList) {
+        if (!IsLayerArt(h) && !HasSelectedAncestor(h, rawList)) {
+            topArts.push_back(h);
+        }
+    }
+    if (topArts.empty()) {
+        PluginLog("[CloneSelectionWithOffset FAIL] No valid graphic art items found in selection");
+        return false;
+    }
+
+    AIRealRect bounds = {0};
+    CalculateTotalBounds(topArts, bounds);
+    double W = std::abs(bounds.right - bounds.left);
+    double H = std::abs(bounds.top - bounds.bottom);
+    if (W < 1e-6 && H < 1e-6) {
+        PluginLog("[CloneSelectionWithOffset FAIL] Selection dimensions are zero");
+        return false;
+    }
+
+    double stepX = W + gap;
+    double stepY = H + gap;
+    double dx = 0.0;
+    double dy = 0.0;
+
+    switch (direction) {
+        case 8: // Up (Numpad 8)
+            dx = 0.0; dy = stepY; break;
+        case 2: // Down (Numpad 2)
+            dx = 0.0; dy = -stepY; break;
+        case 4: // Left (Numpad 4)
+            dx = -stepX; dy = 0.0; break;
+        case 6: // Right (Numpad 6)
+            dx = stepX; dy = 0.0; break;
+        case 7: // Up-Left (Numpad 7)
+            dx = -stepX; dy = stepY; break;
+        case 9: // Up-Right (Numpad 9)
+            dx = stepX; dy = stepY; break;
+        case 1: // Down-Left (Numpad 1)
+            dx = -stepX; dy = -stepY; break;
+        case 3: // Down-Right (Numpad 3)
+            dx = stepX; dy = -stepY; break;
+        case 5: // Center / In-Place clone
+            dx = 0.0; dy = 0.0; break;
+        default:
+            PluginLog("[CloneSelectionWithOffset FAIL] Invalid direction %d", direction);
+            return false;
+    }
+
+    if (sAIUndo) {
+        sAIUndo->SetUndoTextUS(ai::UnicodeString("Pattern Offset Clone"), ai::UnicodeString("Undo Pattern Offset Clone"));
+    }
+
+    ai::CopyScope copyScope;
+    copyScope.Initialize(kAICopyScopeForDuplicate, std::nothrow);
+
+    std::vector<AIArtHandle> newItems;
+    newItems.reserve(topArts.size());
+
+    for (AIArtHandle src : topArts) {
+        if (!src) continue;
+        AIArtHandle newArt = nullptr;
+        AIErr cloneErr = sAIArt->DuplicateArt(src, kPlaceAbove, src, &newArt);
+        if (cloneErr == kNoErr && newArt) {
+            sAIArt->SetArtUserAttr(newArt, kArtHidden, 0);
+            if (std::abs(dx) > 1e-6 || std::abs(dy) > 1e-6) {
+                OffsetArt(newArt, dx, dy);
+            }
+            newItems.push_back(newArt);
+        } else {
+            PluginLog("  [CloneSelectionWithOffset ERROR] DuplicateArt err=%d for %p", cloneErr, src);
+        }
+    }
+
+    copyScope.Terminate(std::nothrow);
+
+    if (!newItems.empty()) {
+        sAIMatchingArt->DeselectAll();
+        for (AIArtHandle item : newItems) {
+            SelectArt(item, true);
+        }
+    }
+
+    sAIDocument->RedrawDocument();
+    PluginLog("[CloneSelectionWithOffset SUCCESS] Cloned %zu item(s) dir=%d (dx=%.2f, dy=%.2f, W=%.2f, H=%.2f)",
+              newItems.size(), direction, dx, dy, W, H);
+    return !newItems.empty();
+}
+
+bool BufferManager::MoveSelectionWithOffset(int direction, double gap) {
+    if (!sAIMatchingArt || !sAIArt || !sAIDocument || !sAITransformArt) {
+        PluginLog("[MoveSelectionWithOffset FAIL] Suites not acquired!");
+        return false;
+    }
+
+    AIDocumentHandle doc = nullptr;
+    if (sAIDocument->GetDocument(&doc) != kNoErr || !doc) {
+        PluginLog("[MoveSelectionWithOffset FAIL] No active document");
+        return false;
+    }
+
+    AIArtHandle** matches = nullptr;
+    ai::int32 count = 0;
+    AIErr err = sAIMatchingArt->GetSelectedArt(&matches, &count);
+    if (err != kNoErr || count <= 0 || !matches || !(*matches)) {
+        PluginLog("[MoveSelectionWithOffset] Nothing selected");
+        return false;
+    }
+
+    std::vector<AIArtHandle> rawList;
+    rawList.reserve(count);
+    for (ai::int32 i = 0; i < count; ++i) {
+        AIArtHandle h = (*matches)[i];
+        if (h) rawList.push_back(h);
+    }
+    if (sAIMdMemory) {
+        sAIMdMemory->MdMemoryDisposeHandle((AIMdMemoryHandle)matches);
+    }
+
+    std::vector<AIArtHandle> topArts;
+    for (AIArtHandle h : rawList) {
+        if (!IsLayerArt(h) && !HasSelectedAncestor(h, rawList)) {
+            topArts.push_back(h);
+        }
+    }
+    if (topArts.empty()) {
+        PluginLog("[MoveSelectionWithOffset FAIL] No valid graphic art items found in selection");
+        return false;
+    }
+
+    AIRealRect bounds = {0};
+    CalculateTotalBounds(topArts, bounds);
+    double W = std::abs(bounds.right - bounds.left);
+    double H = std::abs(bounds.top - bounds.bottom);
+    if (W < 1e-6 && H < 1e-6) {
+        PluginLog("[MoveSelectionWithOffset FAIL] Selection dimensions are zero");
+        return false;
+    }
+
+    double stepX = W + gap;
+    double stepY = H + gap;
+    double dx = 0.0;
+    double dy = 0.0;
+
+    switch (direction) {
+        case 8: // Up (Numpad 8)
+            dx = 0.0; dy = stepY; break;
+        case 2: // Down (Numpad 2)
+            dx = 0.0; dy = -stepY; break;
+        case 4: // Left (Numpad 4)
+            dx = -stepX; dy = 0.0; break;
+        case 6: // Right (Numpad 6)
+            dx = stepX; dy = 0.0; break;
+        case 7: // Up-Left (Numpad 7)
+            dx = -stepX; dy = stepY; break;
+        case 9: // Up-Right (Numpad 9)
+            dx = stepX; dy = stepY; break;
+        case 1: // Down-Left (Numpad 1)
+            dx = -stepX; dy = -stepY; break;
+        case 3: // Down-Right (Numpad 3)
+            dx = stepX; dy = -stepY; break;
+        case 5: // Center / In-Place (no shift)
+            dx = 0.0; dy = 0.0; break;
+        default:
+            PluginLog("[MoveSelectionWithOffset FAIL] Invalid direction %d", direction);
+            return false;
+    }
+
+    if (sAIUndo) {
+        sAIUndo->SetUndoTextUS(ai::UnicodeString("Pattern Offset Move"), ai::UnicodeString("Undo Pattern Offset Move"));
+    }
+
+    for (AIArtHandle src : topArts) {
+        if (!src) continue;
+        if (std::abs(dx) > 1e-6 || std::abs(dy) > 1e-6) {
+            OffsetArt(src, dx, dy);
+        }
+    }
+
+    sAIDocument->RedrawDocument();
+    PluginLog("[MoveSelectionWithOffset SUCCESS] Moved %zu item(s) dir=%d (dx=%.2f, dy=%.2f, W=%.2f, H=%.2f)",
+              topArts.size(), direction, dx, dy, W, H);
+    return true;
+}
+
+bool BufferManager::ReflectSelectionVertical() {
+    return ReflectSelection(false);
+}
+
+bool BufferManager::ReflectSelectionHorizontal() {
+    return ReflectSelection(true);
+}
+
+bool BufferManager::ReflectSelection(bool horizontalAxis) {
+    if (!sAIMatchingArt || !sAIArt || !sAIDocument || !sAITransformArt) {
+        PluginLog("[ReflectSelection FAIL] Suites not acquired!");
+        return false;
+    }
+
+    AIDocumentHandle doc = nullptr;
+    if (sAIDocument->GetDocument(&doc) != kNoErr || !doc) {
+        PluginLog("[ReflectSelection FAIL] No active document");
+        return false;
+    }
+
+    AIArtHandle** matches = nullptr;
+    ai::int32 count = 0;
+    AIErr err = sAIMatchingArt->GetSelectedArt(&matches, &count);
+    if (err != kNoErr || count <= 0 || !matches || !(*matches)) {
+        PluginLog("[ReflectSelection] Nothing selected");
+        return false;
+    }
+
+    std::vector<AIArtHandle> rawList;
+    rawList.reserve(count);
+    for (ai::int32 i = 0; i < count; ++i) {
+        AIArtHandle h = (*matches)[i];
+        if (h) rawList.push_back(h);
+    }
+    if (sAIMdMemory) {
+        sAIMdMemory->MdMemoryDisposeHandle((AIMdMemoryHandle)matches);
+    }
+
+    std::vector<AIArtHandle> topArts;
+    for (AIArtHandle h : rawList) {
+        if (!IsLayerArt(h) && !HasSelectedAncestor(h, rawList)) {
+            topArts.push_back(h);
+        }
+    }
+    if (topArts.empty()) {
+        PluginLog("[ReflectSelection FAIL] No valid graphic art items found in selection");
+        return false;
+    }
+
+    AIRealRect bounds = {0};
+    CalculateTotalBounds(topArts, bounds);
+    double cx = (bounds.left + bounds.right) / 2.0;
+    double cy = (bounds.top + bounds.bottom) / 2.0;
+
+    AIRealMatrix matrix;
+    if (horizontalAxis) {
+        // Reflect across horizontal axis (flip top <-> bottom)
+        matrix.a = 1.0;
+        matrix.b = 0.0;
+        matrix.c = 0.0;
+        matrix.d = -1.0;
+        matrix.tx = 0.0;
+        matrix.ty = 2.0 * cy;
+        if (sAIUndo) {
+            sAIUndo->SetUndoTextUS(ai::UnicodeString("Reflect Horizontal"), ai::UnicodeString("Undo Reflect Horizontal"));
+        }
+    } else {
+        // Reflect across vertical axis (flip left <-> right)
+        matrix.a = -1.0;
+        matrix.b = 0.0;
+        matrix.c = 0.0;
+        matrix.d = 1.0;
+        matrix.tx = 2.0 * cx;
+        matrix.ty = 0.0;
+        if (sAIUndo) {
+            sAIUndo->SetUndoTextUS(ai::UnicodeString("Reflect Vertical"), ai::UnicodeString("Undo Reflect Vertical"));
+        }
+    }
+
+    for (AIArtHandle src : topArts) {
+        if (!src) continue;
+        TransformArtRecursive(src, matrix);
+    }
+
+    sAIDocument->RedrawDocument();
+    PluginLog("[ReflectSelection SUCCESS] Reflected %zu item(s) (axis=%s, cx=%.2f, cy=%.2f)",
+              topArts.size(), horizontalAxis ? "Horizontal" : "Vertical", cx, cy);
+    return true;
+}
+
+
 

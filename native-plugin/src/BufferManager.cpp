@@ -806,8 +806,12 @@ bool BufferManager::CloneSelectionWithOffset(int direction, double gap) {
         return false;
     }
 
-    double stepX = W + gap;
-    double stepY = H + gap;
+    int divisor = ConfigManager::GetInstance().GetOffsetStepDivisor();
+    if (divisor < 1) divisor = 1;
+    if (divisor > 9) divisor = 9;
+
+    double stepX = (W / (double)divisor) + gap;
+    double stepY = (H / (double)divisor) + gap;
     double dx = 0.0;
     double dy = 0.0;
 
@@ -870,8 +874,8 @@ bool BufferManager::CloneSelectionWithOffset(int direction, double gap) {
     }
 
     sAIDocument->RedrawDocument();
-    PluginLog("[CloneSelectionWithOffset SUCCESS] Cloned %zu item(s) dir=%d (dx=%.2f, dy=%.2f, W=%.2f, H=%.2f)",
-              newItems.size(), direction, dx, dy, W, H);
+    PluginLog("[CloneSelectionWithOffset SUCCESS] Cloned %zu item(s) dir=%d step=1/%d (dx=%.2f, dy=%.2f, W=%.2f, H=%.2f)",
+              newItems.size(), direction, divisor, dx, dy, W, H);
     return !newItems.empty();
 }
 
@@ -925,8 +929,12 @@ bool BufferManager::MoveSelectionWithOffset(int direction, double gap) {
         return false;
     }
 
-    double stepX = W + gap;
-    double stepY = H + gap;
+    int divisor = ConfigManager::GetInstance().GetOffsetStepDivisor();
+    if (divisor < 1) divisor = 1;
+    if (divisor > 9) divisor = 9;
+
+    double stepX = (W / (double)divisor) + gap;
+    double stepY = (H / (double)divisor) + gap;
     double dx = 0.0;
     double dy = 0.0;
 
@@ -966,8 +974,8 @@ bool BufferManager::MoveSelectionWithOffset(int direction, double gap) {
     }
 
     sAIDocument->RedrawDocument();
-    PluginLog("[MoveSelectionWithOffset SUCCESS] Moved %zu item(s) dir=%d (dx=%.2f, dy=%.2f, W=%.2f, H=%.2f)",
-              topArts.size(), direction, dx, dy, W, H);
+    PluginLog("[MoveSelectionWithOffset SUCCESS] Moved %zu item(s) dir=%d step=1/%d (dx=%.2f, dy=%.2f, W=%.2f, H=%.2f)",
+              topArts.size(), direction, divisor, dx, dy, W, H);
     return true;
 }
 

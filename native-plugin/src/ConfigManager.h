@@ -40,6 +40,8 @@ public:
     bool IsOffsetCloneHotkeysEnabled() const { return m_offsetCloneEnabled; }
     UINT GetOffsetCloneModifier() const { return m_offsetCloneModifier; }
     UINT GetOffsetMoveModifier() const { return m_offsetMoveModifier; }
+    UINT GetOffsetStepDivisorModifier() const { return m_offsetStepDivisorModifier; }
+    int GetOffsetStepDivisor() const { return m_offsetStepDivisor; }
     double GetOffsetCloneGap() const { return m_offsetCloneGap; }
     int GetOffsetKeyPreset() const { return m_offsetKeyPreset; }
     UINT GetOffsetKey(int dir) const;
@@ -56,6 +58,12 @@ public:
     void SetOffsetCloneHotkeysEnabled(bool b) { m_offsetCloneEnabled = b; }
     void SetOffsetCloneModifier(UINT m) { m_offsetCloneModifier = m; }
     void SetOffsetMoveModifier(UINT m) { m_offsetMoveModifier = m; }
+    void SetOffsetStepDivisorModifier(UINT m) { m_offsetStepDivisorModifier = m; }
+    void SetOffsetStepDivisor(int d) {
+        if (d < 1) d = 1;
+        if (d > 9) d = 9;
+        m_offsetStepDivisor = d;
+    }
     void SetOffsetCloneGap(double g) { m_offsetCloneGap = g; }
     void SetOffsetKeyPreset(int preset);
     void SetOffsetKey(int dir, UINT vk);
@@ -86,6 +94,8 @@ private:
     bool m_offsetCloneEnabled = true;
     UINT m_offsetCloneModifier = MOD_CONTROL;
     UINT m_offsetMoveModifier = MOD_ALT;
+    UINT m_offsetStepDivisorModifier = MOD_CONTROL | MOD_ALT;
+    int m_offsetStepDivisor = 1;
     double m_offsetCloneGap = 0.0;
     int m_offsetKeyPreset = OFFSET_PRESET_NUMPAD;
     UINT m_offsetKeys[10]; // index 1..9

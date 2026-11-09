@@ -1,10 +1,10 @@
 // Microsoft Visual C++ generated resource script.
 #include <windows.h>
 
-#define VER_FILEVERSION             1,2,5,0
-#define VER_FILEVERSION_STR         "1.25.0\0"
-#define VER_PRODUCTVERSION          1,2,5,0
-#define VER_PRODUCTVERSION_STR       "1.25.0\0"
+#define VER_FILEVERSION             1,2,7,0
+#define VER_FILEVERSION_STR         "1.27.0\0"
+#define VER_PRODUCTVERSION          1,2,7,0
+#define VER_PRODUCTVERSION_STR       "1.27.0\0"
 
 VS_VERSION_INFO VERSIONINFO
 FILEVERSION     VER_FILEVERSION
@@ -43,3 +43,22 @@ IDToFile txt "resources\\IDToFile.txt"
 ClipboardPaste_Light_at_2x svg "resources\\ClipboardPaste_Light@2x.svg"
 ClipboardPaste_Dark_at_2x svg "resources\\ClipboardPaste_Dark@2x.svg"
 
+// Step Divisor Dock Icons (1..9)
+ClipboardPaste_1_Light_at_2x svg "resources\\ClipboardPaste_1_Light@2x.svg"
+ClipboardPaste_1_Dark_at_2x svg "resources\\ClipboardPaste_1_Dark@2x.svg"
+ClipboardPaste_2_Light_at_2x svg "resources\\ClipboardPaste_2_Light@2x.svg"
+ClipboardPaste_2_Dark_at_2x svg "resources\\ClipboardPaste_2_Dark@2x.svg"
+ClipboardPaste_3_Light_at_2x svg "resources\\ClipboardPaste_3_Light@2x.svg"
+ClipboardPaste_3_Dark_at_2x svg "resources\\ClipboardPaste_3_Dark@2x.svg"
+ClipboardPaste_4_Light_at_2x svg "resources\\ClipboardPaste_4_Light@2x.svg"
+ClipboardPaste_4_Dark_at_2x svg "resources\\ClipboardPaste_4_Dark@2x.svg"
+ClipboardPaste_5_Light_at_2x svg "resources\\ClipboardPaste_5_Light@2x.svg"
+ClipboardPaste_5_Dark_at_2x svg "resources\\ClipboardPaste_5_Dark@2x.svg"
+ClipboardPaste_6_Light_at_2x svg "resources\\ClipboardPaste_6_Light@2x.svg"
+ClipboardPaste_6_Dark_at_2x svg "resources\\ClipboardPaste_6_Dark@2x.svg"
+ClipboardPaste_7_Light_at_2x svg "resources\\ClipboardPaste_7_Light@2x.svg"
+ClipboardPaste_7_Dark_at_2x svg "resources\\ClipboardPaste_7_Dark@2x.svg"
+ClipboardPaste_8_Light_at_2x svg "resources\\ClipboardPaste_8_Light@2x.svg"
+ClipboardPaste_8_Dark_at_2x svg "resources\\ClipboardPaste_8_Dark@2x.svg"
+ClipboardPaste_9_Light_at_2x svg "resources\\ClipboardPaste_9_Light@2x.svg"
+ClipboardPaste_9_Dark_at_2x svg "resources\\ClipboardPaste_9_Dark@2x.svg"

@@ -182,6 +182,12 @@ void ConfigManager::Load() {
     m_offsetCloneModifier = (UINT)GetPrivateProfileIntA("PatternOffset", "CloneModifier",
                                  GetPrivateProfileIntA("PatternOffset", "Modifier", MOD_CONTROL, ini.c_str()), ini.c_str());
     m_offsetMoveModifier = (UINT)GetPrivateProfileIntA("PatternOffset", "MoveModifier", MOD_ALT, ini.c_str());
+    m_offsetStepDivisorModifier = (UINT)GetPrivateProfileIntA("PatternOffset", "StepDivisorModifier", (MOD_CONTROL | MOD_ALT), ini.c_str());
+    if (m_offsetStepDivisorModifier == (MOD_CONTROL | MOD_SHIFT)) {
+        m_offsetStepDivisorModifier = (MOD_CONTROL | MOD_ALT);
+    }
+    m_offsetStepDivisor = (int)GetPrivateProfileIntA("PatternOffset", "StepDivisor", 1, ini.c_str());
+    if (m_offsetStepDivisor < 1 || m_offsetStepDivisor > 9) m_offsetStepDivisor = 1;
     char gapBuf[32] = {0};
     GetPrivateProfileStringA("PatternOffset", "Gap", "0.0", gapBuf, sizeof(gapBuf), ini.c_str());
     m_offsetCloneGap = std::atof(gapBuf);
@@ -225,6 +231,8 @@ void ConfigManager::Save() {
     WritePrivateProfileStringA("PatternOffset", "Enabled", m_offsetCloneEnabled ? "1" : "0", ini.c_str());
     WritePrivateProfileStringA("PatternOffset", "CloneModifier", std::to_string(m_offsetCloneModifier).c_str(), ini.c_str());
     WritePrivateProfileStringA("PatternOffset", "MoveModifier", std::to_string(m_offsetMoveModifier).c_str(), ini.c_str());
+    WritePrivateProfileStringA("PatternOffset", "StepDivisorModifier", std::to_string(m_offsetStepDivisorModifier).c_str(), ini.c_str());
+    WritePrivateProfileStringA("PatternOffset", "StepDivisor", std::to_string(m_offsetStepDivisor).c_str(), ini.c_str());
     WritePrivateProfileStringA("PatternOffset", "Modifier", std::to_string(m_offsetCloneModifier).c_str(), ini.c_str());
     WritePrivateProfileStringA("PatternOffset", "Gap", std::to_string(m_offsetCloneGap).c_str(), ini.c_str());
     WritePrivateProfileStringA("PatternOffset", "KeyPreset", std::to_string(m_offsetKeyPreset).c_str(), ini.c_str());
@@ -280,6 +288,7 @@ bool ConfigManager::MatchHotkey(const HotkeyConfig& hk, UINT vkCode, UINT curren
 #define IDC_MOD_OFFSET      215
 #define IDC_COMBO_OFFSET_PRESET 216
 #define IDC_MOD_OFFSET_MOVE 217
+#define IDC_MOD_OFFSET_STEP 218
 #define IDC_EDIT_OFFSET_KEY_1 221
 #define IDC_EDIT_OFFSET_KEY_2 222
 #define IDC_EDIT_OFFSET_KEY_3 223
@@ -310,6 +319,7 @@ struct DialogData {
     bool offsetEnabled;
     UINT offsetMod;
     UINT offsetMoveMod;
+    UINT offsetStepMod;
     int offsetPreset;
     UINT offsetKeys[10];
     bool saved;
@@ -397,9 +407,10 @@ static void PopulateCombos(HWND hDlg) {
     HWND hKeyReflectHoriz = GetDlgItem(hDlg, IDC_KEY_REFLECT_HORIZ);
     HWND hModOffset = GetDlgItem(hDlg, IDC_MOD_OFFSET);
     HWND hModOffsetMove = GetDlgItem(hDlg, IDC_MOD_OFFSET_MOVE);
+    HWND hModOffsetStep = GetDlgItem(hDlg, IDC_MOD_OFFSET_STEP);
     HWND hPresetOffset = GetDlgItem(hDlg, IDC_COMBO_OFFSET_PRESET);
 
-    HWND modCombos[] = { hModCopy, hModPlace, hModCenter, hModAll, hModReflectVert, hModReflectHoriz, hModOffset, hModOffsetMove };
+    HWND modCombos[] = { hModCopy, hModPlace, hModCenter, hModAll, hModReflectVert, hModReflectHoriz, hModOffset, hModOffsetMove, hModOffsetStep };
     HWND keyCombos[] = { hKeyCopy, hKeyPlace, hKeyCenter, hKeyAll, hKeyReflectVert, hKeyReflectHoriz };
 
     for (HWND mc : modCombos) {
@@ -463,6 +474,7 @@ static void PopulateCombos(HWND hDlg) {
 
     selectMod(hModOffset, g_dlgData.offsetMod);
     selectMod(hModOffsetMove, g_dlgData.offsetMoveMod);
+    selectMod(hModOffsetStep, g_dlgData.offsetStepMod);
 
     if (hPresetOffset) {
         int p = g_dlgData.offsetPreset;
@@ -574,6 +586,12 @@ static LRESULT CALLBACK SettingsDlgProc(HWND hwnd, UINT msg, WPARAM wParam, LPAR
                     g_dlgData.offsetMoveMod = g_supportedMods[idxModOffsetMove].mod;
                 }
 
+                HWND hModOffsetStep = GetDlgItem(hwnd, IDC_MOD_OFFSET_STEP);
+                int idxModOffsetStep = (int)SendMessage(hModOffsetStep, CB_GETCURSEL, 0, 0);
+                if (idxModOffsetStep >= 0 && idxModOffsetStep < (int)(sizeof(g_supportedMods) / sizeof(g_supportedMods[0]))) {
+                    g_dlgData.offsetStepMod = g_supportedMods[idxModOffsetStep].mod;
+                }
+
                 HWND hPreset = GetDlgItem(hwnd, IDC_COMBO_OFFSET_PRESET);
                 int idxPreset = (int)SendMessage(hPreset, CB_GETCURSEL, 0, 0);
                 if (idxPreset >= 0 && idxPreset <= 4) {
@@ -612,6 +630,7 @@ static LRESULT CALLBACK SettingsDlgProc(HWND hwnd, UINT msg, WPARAM wParam, LPAR
                 g_dlgData.offsetEnabled = true;
                 g_dlgData.offsetMod = MOD_CONTROL;
                 g_dlgData.offsetMoveMod = MOD_ALT;
+                g_dlgData.offsetStepMod = MOD_CONTROL | MOD_ALT;
                 g_dlgData.offsetPreset = OFFSET_PRESET_NUMPAD;
                 FillPresetKeys(OFFSET_PRESET_NUMPAD, g_dlgData.offsetKeys);
                 PopulateCombos(hwnd);
@@ -722,6 +741,7 @@ bool ConfigManager::ShowSettingsDialog(HWND parentHwnd, float currentScale) {
     g_dlgData.offsetEnabled = m_offsetCloneEnabled;
     g_dlgData.offsetMod = m_offsetCloneModifier;
     g_dlgData.offsetMoveMod = m_offsetMoveModifier;
+    g_dlgData.offsetStepMod = m_offsetStepDivisorModifier;
     g_dlgData.offsetPreset = m_offsetKeyPreset;
     for (int i = 1; i <= 9; ++i) g_dlgData.offsetKeys[i] = m_offsetKeys[i];
     g_dlgData.saved = false;
@@ -847,8 +867,12 @@ bool ConfigManager::ShowSettingsDialog(HWND parentHwnd, float currentScale) {
     addLabel("Move:", S(24), S(222), S(42), S(18));
     HWND hModOffsetMove = makeCombo(IDC_MOD_OFFSET_MOVE, S(68), S(220), S(88));
 
+    // Row 10: Step modifier (left)
+    addLabel("Step:", S(24), S(248), S(42), S(18));
+    HWND hModOffsetStep = makeCombo(IDC_MOD_OFFSET_STEP, S(68), S(246), S(88));
+
     // Keypad Layout (3x3 Matrix)
-    addLabel("Direction Keys:\n(3x3 Matrix)", S(24), S(248), S(160), S(36));
+    addLabel("Direction Keys (3x3):", S(24), S(272), S(160), S(18));
 
     int gridDirs[3][3] = {
         { 7, 8, 9 },
@@ -958,6 +982,7 @@ bool ConfigManager::ShowSettingsDialog(HWND parentHwnd, float currentScale) {
         m_offsetCloneEnabled = g_dlgData.offsetEnabled;
         m_offsetCloneModifier = g_dlgData.offsetMod;
         m_offsetMoveModifier = g_dlgData.offsetMoveMod;
+        m_offsetStepDivisorModifier = g_dlgData.offsetStepMod;
         m_offsetKeyPreset = g_dlgData.offsetPreset;
         for (int i = 1; i <= 9; ++i) m_offsetKeys[i] = g_dlgData.offsetKeys[i];
         Save();

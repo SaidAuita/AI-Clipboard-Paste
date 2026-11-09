@@ -26,6 +26,7 @@ public:
     void SwitchTab(int tabIndex);
     int GetActiveTab() const { return m_activeTab; }
     void UpdateOffsetUI(int lastDir = 0, bool isMove = false);
+    void UpdateDockIcon(int divisor = 0);
 
 private:
     ClipboardPastePlugin();

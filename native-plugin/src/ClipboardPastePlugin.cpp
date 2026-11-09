@@ -4,7 +4,7 @@
 #include <windows.h>
 #include <shellapi.h>
 
-#define PLUGIN_VERSION_STR     "v1.25"
+#define PLUGIN_VERSION_STR     "v1.27"
 
 #define IDC_STATIC_TITLE       100
 #define IDC_STATIC_VERSION     101
@@ -38,6 +38,7 @@
 #define IDC_BTN_DIR_9          139
 #define IDC_STATIC_OFFSET_STATUS 140
 #define IDC_BTN_OFFSET_SETTINGS 141
+#define IDC_BTN_OFFSET_STEP     143
 
 static HWND g_hStaticHeaderTitle = NULL;
 static HWND g_hStaticHeaderVersion = NULL;
@@ -63,6 +64,7 @@ static HWND g_hStaticOffsetModHeader = NULL;
 static HWND g_hBtnDir[10] = { NULL };
 static HWND g_hStaticOffsetStatus = NULL;
 static HWND g_hBtnOffsetSettings = NULL;
+static HWND g_hBtnOffsetStep = NULL;
 
 static const wchar_t* g_dirPrefixes[10] = {
     L"",
@@ -557,7 +559,13 @@ static void RelayoutPanel(HWND hwnd) {
         }
         y += 3 * gridRowH + 2 * gap + S(4);
 
-        if (g_hBtnOffsetSettings) {
+        if (g_hBtnOffsetStep && g_hBtnOffsetSettings) {
+            int halfW = (availW - S(4)) / 2;
+            int smallBtnH = S(20);
+            SetWindowPos(g_hBtnOffsetStep, NULL, pad, y, halfW, smallBtnH, SWP_NOZORDER);
+            SetWindowPos(g_hBtnOffsetSettings, NULL, pad + halfW + S(4), y, halfW, smallBtnH, SWP_NOZORDER);
+            y += smallBtnH + S(4);
+        } else if (g_hBtnOffsetSettings) {
             int smallBtnH = S(20);
             SetWindowPos(g_hBtnOffsetSettings, NULL, pad, y, availW, smallBtnH, SWP_NOZORDER);
             y += smallBtnH + S(4);
@@ -690,6 +698,30 @@ static LRESULT CALLBACK PanelWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM 
                     if (ConfigManager::GetInstance().ShowSettingsDialog(hwnd, scale)) {
                         ClipboardPastePlugin::GetInstance().UpdateButtonsText();
                         ClipboardPastePlugin::GetInstance().UpdateUI();
+                        ClipboardPastePlugin::GetInstance().UpdateOffsetUI();
+                    }
+                    return 0;
+                }
+                case IDC_BTN_OFFSET_STEP: {
+                    auto& cfg = ConfigManager::GetInstance();
+                    int curDiv = cfg.GetOffsetStepDivisor();
+                    HMENU hMenu = CreatePopupMenu();
+                    for (int i = 1; i <= 9; ++i) {
+                        std::string item = "1/" + std::to_string(i) + (i == 1 ? "  (Full step)" : "");
+                        UINT flags = MF_STRING;
+                        if (i == curDiv) flags |= MF_CHECKED;
+                        AppendMenuA(hMenu, flags, 2000 + i, item.c_str());
+                    }
+                    RECT rcBtn = { 0 };
+                    GetWindowRect(g_hBtnOffsetStep, &rcBtn);
+                    int choice = TrackPopupMenu(hMenu, TPM_RETURNCMD | TPM_LEFTALIGN | TPM_TOPALIGN,
+                                               rcBtn.left, rcBtn.bottom, 0, hwnd, NULL);
+                    DestroyMenu(hMenu);
+                    if (choice >= 2001 && choice <= 2009) {
+                        int newDiv = choice - 2000;
+                        cfg.SetOffsetStepDivisor(newDiv);
+                        cfg.Save();
+                        ClipboardPastePlugin::GetInstance().UpdateDockIcon(newDiv);
                         ClipboardPastePlugin::GetInstance().UpdateOffsetUI();
                     }
                     return 0;
@@ -859,6 +891,38 @@ static LRESULT CALLBACK KeyboardHookProc(int nCode, WPARAM wParam, LPARAM lParam
                     BufferManager::GetInstance().ReflectSelectionHorizontal();
                     pMsg->message = WM_NULL;
                     return 1;
+                } else if (cfg.IsOffsetCloneHotkeysEnabled() && mod == cfg.GetOffsetStepDivisorModifier()) {
+                    int divisor = 0;
+                    bool isExtended = (HIWORD(pMsg->lParam) & KF_EXTENDED) != 0;
+                    if (vk >= '1' && vk <= '9') {
+                        divisor = vk - '0';
+                    } else if (vk >= VK_NUMPAD1 && vk <= VK_NUMPAD9) {
+                        divisor = vk - VK_NUMPAD1 + 1;
+                    } else if (!isExtended) {
+                        switch (vk) {
+                            case VK_END:   divisor = 1; break; // Num 1
+                            case VK_DOWN:  divisor = 2; break; // Num 2
+                            case VK_NEXT:  divisor = 3; break; // Num 3
+                            case VK_LEFT:  divisor = 4; break; // Num 4
+                            case VK_CLEAR: divisor = 5; break; // Num 5
+                            case VK_RIGHT: divisor = 6; break; // Num 6
+                            case VK_HOME:  divisor = 7; break; // Num 7
+                            case VK_UP:    divisor = 8; break; // Num 8
+                            case VK_PRIOR: divisor = 9; break; // Num 9
+                        }
+                    }
+
+                    if (divisor >= 1 && divisor <= 9) {
+                        SPPluginRef pluginRef = ClipboardPastePlugin::GetInstance().GetPluginRef();
+                        AppContext appContext(pluginRef);
+                        cfg.SetOffsetStepDivisor(divisor);
+                        cfg.Save();
+                        ClipboardPastePlugin::GetInstance().UpdateDockIcon(divisor);
+                        ClipboardPastePlugin::GetInstance().UpdateOffsetUI(0, false);
+                        PluginLog("[HotKey Hook] Intercepted Step Divisor Hotkey -> 1/%d", divisor);
+                        pMsg->message = WM_NULL;
+                        return 1;
+                    }
                 } else if (cfg.IsOffsetCloneHotkeysEnabled() && (mod == cfg.GetOffsetCloneModifier() || mod == cfg.GetOffsetMoveModifier())) {
                     bool isMove = (mod == cfg.GetOffsetMoveModifier() && mod != cfg.GetOffsetCloneModifier());
                     int dir = 0;
@@ -1046,8 +1110,10 @@ SPErr ClipboardPastePlugin::CreateDockablePanel() {
     sAIPanel->SetSizes(m_panelRef, minS, prefUnconstS, prefConstS, maxS);
 
     // Set panel dock SVG icon (light & dark theme)
-    ai::uint32 iconResID = 16300;
-    ai::uint32 darkIconResID = 16301;
+    int curDivisor = ConfigManager::GetInstance().GetOffsetStepDivisor();
+    if (curDivisor < 1 || curDivisor > 9) curDivisor = 1;
+    ai::uint32 iconResID = 16300 + (curDivisor - 1) * 2;
+    ai::uint32 darkIconResID = 16301 + (curDivisor - 1) * 2;
     sAIPanel->SetSVGIconResourceID(m_panelRef, iconResID, darkIconResID);
 
     sAIPanel->SetVisibilityChangedNotifyProc(m_panelRef, PanelVisibilityChangedNotifyProc);
@@ -1156,6 +1222,11 @@ SPErr ClipboardPastePlugin::CreateDockablePanel() {
             WS_CHILD | BS_PUSHBUTTON,
             0, 0, 50, 20, m_hPanelDlg, (HMENU)IDC_BTN_OFFSET_SETTINGS, hInst, NULL);
 
+        g_hBtnOffsetStep = CreateWindowExA(
+            0, "BUTTON", "Step: 1/1",
+            WS_CHILD | BS_PUSHBUTTON,
+            0, 0, 50, 20, m_hPanelDlg, (HMENU)IDC_BTN_OFFSET_STEP, hInst, NULL);
+
         g_hStaticOffsetStatus = CreateWindowExA(
             0, "STATIC", "Shortcut: [Ctrl + Key]",
             WS_CHILD | SS_LEFT,
@@ -1190,6 +1261,7 @@ SPErr ClipboardPastePlugin::CreateDockablePanel() {
             SetWindowLongPtr(g_hBtnDir[i], GWLP_WNDPROC, (LONG_PTR)CustomButtonProc);
         }
         SetWindowLongPtr(g_hBtnOffsetSettings, GWLP_WNDPROC, (LONG_PTR)CustomButtonProc);
+        SetWindowLongPtr(g_hBtnOffsetStep, GWLP_WNDPROC, (LONG_PTR)CustomButtonProc);
 
         g_oldStatusProc = (WNDPROC)GetWindowLongPtr(g_hStaticStatus, GWLP_WNDPROC);
         SetWindowLongPtr(g_hStaticStatus, GWLP_WNDPROC, (LONG_PTR)CustomStatusProc);
@@ -1297,6 +1369,7 @@ void ClipboardPastePlugin::SwitchTab(int tabIndex) {
         if (g_hBtnDir[i]) ShowWindow(g_hBtnDir[i], showTab1);
     }
     if (g_hBtnOffsetSettings) ShowWindow(g_hBtnOffsetSettings, showTab1);
+    if (g_hBtnOffsetStep) ShowWindow(g_hBtnOffsetStep, showTab1);
     if (g_hStaticOffsetStatus) ShowWindow(g_hStaticOffsetStatus, showTab1);
 
     if (g_hTabBtnClipboard) InvalidateRect(g_hTabBtnClipboard, NULL, FALSE);
@@ -1327,8 +1400,18 @@ static std::string GetModifierDisplayName(UINT mod, bool uppercase = false) {
 
 void ClipboardPastePlugin::UpdateOffsetUI(int lastDir, bool isMove) {
     auto& cfg = ConfigManager::GetInstance();
+    int divisor = cfg.GetOffsetStepDivisor();
+    if (divisor < 1) divisor = 1;
+    if (divisor > 9) divisor = 9;
 
-    // 1. Update modifier header bar ([CTRL] Clone  |  [ALT] Move)
+    // 0. Update Step button text: "Step: 1/N"
+    if (g_hBtnOffsetStep) {
+        std::string sText = "Step: 1/" + std::to_string(divisor);
+        SetWindowTextA(g_hBtnOffsetStep, sText.c_str());
+        InvalidateRect(g_hBtnOffsetStep, NULL, FALSE);
+    }
+
+    // 1. Update modifier header bar ([CTRL] Clone  |  [ALT] Move  |  1/N)
     if (g_hStaticOffsetModHeader) {
         char modBuf[128];
         if (!cfg.IsOffsetCloneHotkeysEnabled()) {
@@ -1336,7 +1419,7 @@ void ClipboardPastePlugin::UpdateOffsetUI(int lastDir, bool isMove) {
         } else {
             std::string cMod = GetModifierDisplayName(cfg.GetOffsetCloneModifier(), true);
             std::string mMod = GetModifierDisplayName(cfg.GetOffsetMoveModifier(), true);
-            std::snprintf(modBuf, sizeof(modBuf), "[%s] Clone  |  [%s] Move", cMod.c_str(), mMod.c_str());
+            std::snprintf(modBuf, sizeof(modBuf), "[%s] Clone | [%s] Move | 1/%d", cMod.c_str(), mMod.c_str(), divisor);
         }
         SetWindowTextA(g_hStaticOffsetModHeader, modBuf);
         InvalidateRect(g_hStaticOffsetModHeader, NULL, FALSE);
@@ -1352,15 +1435,20 @@ void ClipboardPastePlugin::UpdateOffsetUI(int lastDir, bool isMove) {
         }
     }
 
-    // 3. Selection dimensions
+    // 3. Selection dimensions and calculated step
     if (g_hStaticOffsetInfo) {
         double w = 0.0, h = 0.0;
         bool hasSel = BufferManager::GetInstance().GetSelectionDimensions(w, h);
         char infoBuf[256];
         if (hasSel) {
-            std::snprintf(infoBuf, sizeof(infoBuf), "Selection: %.1f x %.1f pt", w, h);
+            if (divisor > 1) {
+                std::snprintf(infoBuf, sizeof(infoBuf), "Sel: %.1f x %.1f | Step 1/%d: %.1f x %.1f pt",
+                              w, h, divisor, w / (double)divisor, h / (double)divisor);
+            } else {
+                std::snprintf(infoBuf, sizeof(infoBuf), "Selection: %.1f x %.1f pt (Step: 1/1)", w, h);
+            }
         } else {
-            std::snprintf(infoBuf, sizeof(infoBuf), "No object selected");
+            std::snprintf(infoBuf, sizeof(infoBuf), "No object selected (Step: 1/%d)", divisor);
         }
         SetWindowTextA(g_hStaticOffsetInfo, infoBuf);
         InvalidateRect(g_hStaticOffsetInfo, NULL, FALSE);
@@ -1374,15 +1462,16 @@ void ClipboardPastePlugin::UpdateOffsetUI(int lastDir, bool isMove) {
         } else {
             std::string cMod = GetModifierDisplayName(cfg.GetOffsetCloneModifier(), false);
             std::string mMod = GetModifierDisplayName(cfg.GetOffsetMoveModifier(), false);
+            std::string sMod = GetModifierDisplayName(cfg.GetOffsetStepDivisorModifier(), false);
             double gap = cfg.GetOffsetCloneGap();
             if (lastDir >= 1 && lastDir <= 9) {
                 std::string kName = cfg.GetOffsetKeyName(lastDir);
                 if (isMove) {
-                    std::snprintf(statusBuf, sizeof(statusBuf), "Moved Dir %d | Gap: %.1f pt\nKey: [%s + %s]",
-                                  lastDir, gap, mMod.c_str(), kName.c_str());
+                    std::snprintf(statusBuf, sizeof(statusBuf), "Moved Dir %d (1/%d) | Gap: %.1f pt\nKey: [%s + %s] | Step: [%s+1..9]",
+                                  lastDir, divisor, gap, mMod.c_str(), kName.c_str(), sMod.c_str());
                 } else {
-                    std::snprintf(statusBuf, sizeof(statusBuf), "Cloned Dir %d | Gap: %.1f pt\nKey: [%s + %s]",
-                                  lastDir, gap, cMod.c_str(), kName.c_str());
+                    std::snprintf(statusBuf, sizeof(statusBuf), "Cloned Dir %d (1/%d) | Gap: %.1f pt\nKey: [%s + %s] | Step: [%s+1..9]",
+                                  lastDir, divisor, gap, cMod.c_str(), kName.c_str(), sMod.c_str());
                 }
             } else {
                 int preset = cfg.GetOffsetKeyPreset();
@@ -1392,13 +1481,28 @@ void ClipboardPastePlugin::UpdateOffsetUI(int lastDir, bool isMove) {
                 else if (preset == OFFSET_PRESET_UIO_JKL_M) pName = "UIO/JKL/M";
                 else if (preset == OFFSET_PRESET_CUSTOM) pName = "Custom Keys";
 
-                std::snprintf(statusBuf, sizeof(statusBuf), "Clone: [%s+Key] | Move: [%s+Key]\nLayout: %s",
-                              cMod.c_str(), mMod.c_str(), pName.c_str());
+                std::snprintf(statusBuf, sizeof(statusBuf), "Clone: [%s+Key] | Move: [%s+Key]\nStep: 1/%d [%s+1..9] | %s",
+                              cMod.c_str(), mMod.c_str(), divisor, sMod.c_str(), pName.c_str());
             }
         }
         SetWindowTextA(g_hStaticOffsetStatus, statusBuf);
         InvalidateRect(g_hStaticOffsetStatus, NULL, FALSE);
     }
+}
+
+void ClipboardPastePlugin::UpdateDockIcon(int divisor) {
+    if (!m_panelRef || !sAIPanel) return;
+    if (divisor < 1 || divisor > 9) {
+        divisor = ConfigManager::GetInstance().GetOffsetStepDivisor();
+    }
+    if (divisor < 1) divisor = 1;
+    if (divisor > 9) divisor = 9;
+
+    ai::uint32 iconResID = 16300 + (divisor - 1) * 2;
+    ai::uint32 darkIconResID = 16301 + (divisor - 1) * 2;
+    AIErr err = sAIPanel->SetSVGIconResourceID(m_panelRef, iconResID, darkIconResID);
+    PluginLog("[UpdateDockIcon] divisor=%d, iconResID=%u, darkIconResID=%u, err=%d",
+              divisor, iconResID, darkIconResID, err);
 }
 
 void ClipboardPastePlugin::UpdateUI() {
@@ -1467,6 +1571,7 @@ void ClipboardPastePlugin::UpdateButtonsText() {
         SetWindowTextA(g_hBtnReflectHoriz, text.c_str());
         InvalidateRect(g_hBtnReflectHoriz, NULL, FALSE);
     }
+    UpdateDockIcon();
 }
 
 SPErr ClipboardPastePlugin::GoMenuItem(void* message) {

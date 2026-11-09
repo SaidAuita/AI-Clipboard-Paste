@@ -6,7 +6,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Native%20Plugin-v1.17%20(Recommended)-brightgreen.svg?style=flat-square" alt="Native Plugin v1.17">
+  <img src="https://img.shields.io/badge/Native%20Plugin-v1.27%20(Recommended)-brightgreen.svg?style=flat-square" alt="Native Plugin v1.27">
   <img src="https://img.shields.io/badge/CEP%20Extension-v1.0.12-blue.svg?style=flat-square" alt="CEP Version v1.0.12">
   <img src="https://img.shields.io/badge/Adobe%20Illustrator-2020--2026%2B-orange.svg?style=flat-square" alt="Illustrator Compatibility">
   <img src="https://img.shields.io/badge/Platform-Windows%20x64%20%7C%20macOS-lightgrey.svg?style=flat-square" alt="OS Support">
@@ -15,7 +15,7 @@
 
 <p align="center">
   *( 🇬🇧 <a href="#english"><b>English</b></a> | 🇷🇺 <a href="#русский"><b>Русский</b></a> )* &nbsp;•&nbsp; 
-  <a href="https://github.com/SaidAuita/AI-Clipboard-Paste/releases/download/v1.17/Clipboard_Paste_Plugin_v1.17.zip"><b>⚡ Download Native Plugin v1.17 (.zip)</b></a> &nbsp;•&nbsp; 
+  <a href="https://github.com/SaidAuita/AI-Clipboard-Paste/releases/download/v1.27/Clipboard_Paste_Plugin_v1.27.zip"><b>⚡ Download Native Plugin v1.27 (.zip)</b></a> &nbsp;•&nbsp; 
   <a href="https://github.com/SaidAuita/AI-Clipboard-Paste/releases"><b>📦 All Releases</b></a>
 </p>
 
@@ -25,13 +25,14 @@
 ## 🇬🇧 English
 
 > [!IMPORTANT]
-> ### 📢 Update v1.17: Disable Plugin Option & Paste on All Artboards (F8)
-> - **Disable Plugin (Ignore Hotkeys) Option:** In the **Settings...** dialog, you can now toggle `Disable plugin (ignore hotkeys)`. When active, the plugin completely stops intercepting keyboard shortcuts (`F5`, `F6`, `F7`, `F8`), letting Illustrator process native hotkeys uninterrupted. By default upon installation, the plugin is active/enabled (`Disabled=0`).
-> - **Paste on All Artboards (`F8`):** Instantly duplicate artwork across all artboards in the document with in-place coordinate alignment.
-> - **Completely Silent Operation:** Zero system beep sounds (`MessageBeep` removed).
-> - **Adaptive Spectrum Theme & Clear Status:** Clear indicator on panel (`Status: Disabled (Hotkeys off)`) and button labels (`(Off)`).
+> ### 📢 Update v1.27: Step Divisor (1/N), Ctrl+Alt Hotkeys & Dynamic Dock Icons
+> - **Step Divisor ($1/N$):** Ability to set offset division from $1/1$ to $1/9$. When selecting a block of multiple objects (e.g. diagonal row of 6 squares), you can step-clone or shift the entire selection by the exact dimension of a single square ($W/6, H/6$) instead of the whole selection bounding box!
+> - **Hotkeys `Ctrl + Alt + [1..9]`:** Instantly set the step divisor without opening dialogs (supports both Numpad and top digit keys).
+> - **Button `[ Step: 1/N ]` on Palette:** Located right next to `Settings...`. Displays a popup menu to select divisors $1/1$ through $1/9$.
+> - **Dynamic Palette Dock Icon:** Collapsed panel icon in the Illustrator dock displays a bright green digit showing the active step ($1..9$).
+> - **Dimension String:** Displays precise step calculations: `Sel: W x H | Step 1/6: (W/6) x (H/6) pt`.
 > 
-> 📥 **Download Native Plugin Installer:** [**Clipboard_Paste_Plugin_v1.17.zip**](https://github.com/SaidAuita/AI-Clipboard-Paste/releases/download/v1.17/Clipboard_Paste_Plugin_v1.17.zip) *(Release: [v1.17](https://github.com/SaidAuita/AI-Clipboard-Paste/releases/tag/v1.17))*
+> 📥 **Download Native Plugin Installer:** [**Clipboard_Paste_Plugin_v1.27.zip**](https://github.com/SaidAuita/AI-Clipboard-Paste/releases/download/v1.27/Clipboard_Paste_Plugin_v1.27.zip) *(Release: [v1.27](https://github.com/SaidAuita/AI-Clipboard-Paste/releases/tag/v1.27))*
 
 ### ⚡ The Core Problem: Illustrator Clipboard Failure
 
@@ -106,16 +107,19 @@ To diagnose this issue systematically, a low-level diagnostic monitor — **[AI-
 
 ---
 
-### 🌟 1. Native C++ Plugin (.aip) — The Recommended Experience (v1.25)
+### 🌟 1. Native C++ Plugin (.aip) — The Recommended Experience (v1.27)
 
 The **Native C++ Plugin** is the primary, fastest, and most capable tool for instant vector duplication and transformation in Adobe Illustrator CC 2020 – 2026+:
 
 <p align="center">
-  <img src="images/Clipboard Paste Plugin_01.png" alt="Clipboard Tab: Copy, Paste, and Quick Reflect" width="270">
+  <img src="images/Clipboard Paste Plugin_01.png" alt="Clipboard Tab: Copy, Paste, and Quick Reflect" width="220">
   &nbsp;&nbsp;
-  <img src="images/Clipboard Paste Plugin_02.png" alt="Offset Clone Tab: Pattern and Pixel Art Creation" width="270">
+  <img src="images/Clipboard Paste Plugin_02.png" alt="Offset Clone Tab with Step 1/N" width="220">
   &nbsp;&nbsp;
-  <img src="images/Clipboard Paste Plugin_03.png" alt="Preferences Dialog" width="350">
+  <img src="images/Clipboard Paste Plugin_03.png" alt="Preferences Dialog" width="280">
+</p>
+<p align="center">
+  <img src="images/Clipboard Paste Plugin_04.png" alt="Step Divisor 1/6 Mode in Action" width="800">
 </p>
 
 * **🔥 Hotkeys Work Instantly Out of the Box:**
@@ -127,6 +131,7 @@ The **Native C++ Plugin** is the primary, fastest, and most capable tool for ins
   - `F10` — Reflect Horizontal (flip top <-> bottom, $y = cy$).
   - `Ctrl + Numpad [1..9]` — Pattern Offset Clone (clone selection by exact dimensions).
   - `Alt + Numpad [1..9]` — Pattern Offset Move (shift selection by exact dimensions without duplicating).
+  - `Ctrl + Alt + [1..9]` — Step Divisor hotkeys (set offset step from $1/1$ to $1/9$).
   Keystrokes are captured globally at process level without needing to click the panel or switch focus!
 
 * **🎯 Rapid Pattern, Pixel Art & Grid Creation (Tab «Offset Clone»):**
@@ -135,6 +140,12 @@ The **Native C++ Plugin** is the primary, fastest, and most capable tool for ins
   - **Real-Time Pattern Drawing:** Repeatedly tapping or holding direction keys (e.g., `Ctrl+Num6`, `Ctrl+Num6`, `Ctrl+Num2`) lets you build seamless tile patterns, tessellations, and pixel graphics in seconds — with pixel-brush speed but retaining pure vector geometry!
   - **Move Mode (`Alt`):** Hold **`Alt + [1..9]`** to shift the artwork by its exact size without creating duplicates.
   - **Laptop Friendly:** For keyboards without a physical Numpad, open **Settings...** to switch to the top number row `1..9`, letter grids `QWE / ASD / ZXC`, `UIO / JKL / M`, or configure custom keys.
+
+* **📐 Fractional Step Offset «Step Divisor» ($1/N$):**
+  - **Working with Complex Composite Blocks:** Frequently you need to clone or shift not a single tile, but a composite diagonal chain or grouped structure (e.g. 6 squares diagonally). A standard offset would shift the entire 6-square block by its 100% outer bounds.
+  - **Instant Step Setting:** Press **`Ctrl + Alt + [1..9]`** (or click the `[ Step: 1/N ]` button on the palette) to set step divisor $\Delta = \frac{\text{Size}}{N}$. With step `1/6`, the entire 6-square group moves or duplicates by the exact width/height of a single cell!
+  - **Dynamic Palette Dock Icon:** The docked palette icon dynamically updates to show the bright green digit ($1..9$) of the active step.
+  - **Information Label:** Displays the exact calculated delta: `Sel: W x H | Step 1/6: (W/6) x (H/6) pt`.
 
 * **🪞 Instant Hotkey Reflection (Reflect Vertical / Horizontal):**
   - Single-key reflection via `F9` (Vertical axis, flip left/right) and `F10` (Horizontal axis, flip top/bottom) centered on the selection bounds. No need to reach for the Reflect tool `(O)` or transform submenus.
@@ -145,10 +156,10 @@ The **Native C++ Plugin** is the primary, fastest, and most capable tool for ins
   - *Resolution:* Selection is now applied safely at the container root according to Adobe SDK guidelines, and the `CopyScope` lifecycle is strictly isolated.
 
 * **🎨 100% Native Illustrator Theme Adaptation:** Fully custom-rendered dockable palette matching Illustrator's native Properties panel with 3px rounded buttons. Dynamically matches all 4 UI brightness themes.
-* **⚙️ In-Panel Preferences Dialog (7 Sections):** Click **Settings...** to remap hotkeys (`F1`–`F12`, `Alt+...`, `Ctrl+...`), select matrix key presets, choose Clone/Move modifiers, or toggle disable mode.
+* **⚙️ In-Panel Preferences Dialog (7 Sections):** Click **Settings...** to remap hotkeys (`F1`–`F12`, `Alt+...`, `Ctrl+...`, `Ctrl+Alt+...`), select matrix key presets, choose Clone/Move/Step modifiers, or toggle disable mode.
 
 #### Quick Native Plugin Installation:
-1. Download the installer archive: [**Clipboard_Paste_Plugin_v1.25.zip**](https://github.com/SaidAuita/AI-Clipboard-Paste/releases/download/v1.25/Clipboard_Paste_Plugin_v1.25.zip) (or get it from [`native-plugin/`](native-plugin/)).
+1. Download the installer archive: [**Clipboard_Paste_Plugin_v1.27.zip**](https://github.com/SaidAuita/AI-Clipboard-Paste/releases/download/v1.27/Clipboard_Paste_Plugin_v1.27.zip) (or get it from [`native-plugin/`](native-plugin/)).
 2. Extract the archive and run **`Install_Plugin.bat`** (automatically detects all installed Illustrator versions 2020..2026+ and copies `ClipboardPaste.aip`).
 3. Launch Adobe Illustrator and open **Window ➔ Clipboard Paste**.
 
@@ -320,13 +331,14 @@ Run `Uninstall.bat` to cleanly remove the extension from Adobe CEP without affec
 ## 🇷🇺 Русский
 
 > [!IMPORTANT]
-> ### 📢 Обновление v1.17: Опция отключения плагина и вставка на все артборды (F8)
-> - **Чекбокс отключения плагина и горячих клавиш:** В диалоге настроек (**Settings...**) добавлен чекбокс `Disable plugin (ignore hotkeys)`. При его активации плагин полностью отключает перехват клавиш (`F5`, `F6`, `F7`, `F8`), передавая управление стандартным функциям Illustrator. По умолчанию при установке плагин включен (`Disabled=0`).
-> - **Вставка на все артборды (`F8`):** Быстрое дублирование выделения сразу на все монтажные области активного документа.
-> - **Полностью бесшумная работа:** Отсутствуют системные звуки при копировании и вставке.
-> - **Наглядная индикация статуса:** На карточке буфера отображается `Status: Disabled (Hotkeys off)`, а на кнопках — отметка `(Off)`.
+> ### 📢 Обновление v1.27: Кратность шага (Step Divisor 1/N), хоткеи Ctrl+Alt+1..9 и динамические иконки
+> - **Кратность шага (Step Divisor $1/N$):** Возможность задавать кратность смещения от $1/1$ до $1/9$. При выделении блока из нескольких объектов (например, диагонали из 6 квадратов) весь блок можно сдвигать или клонировать ровно на размер одной клетки ($W/6, H/6$), а не на весь габарит.
+> - **Горячие клавиши `Ctrl + Alt + [1..9]`:** Мгновенное переключение кратности без открытия диалогов (поддерживается цифровая клавиатура Numpad и верхний ряд цифр).
+> - **Кнопка `[ Step: 1/N ]` на палитре:** Расположена рядом с `Settings...`. Открывает всплывающее меню с наглядным выбором кратности.
+> - **Динамическая иконка панели:** Свернутая палитра в доке Illustrator отображает зеленую цифру активного шага ($1..9$).
+> - **Информационная строка:** Рассчитывает точный размер шага: `Sel: W x H | Step 1/6: (W/6) x (H/6) pt`.
 > 
-> 📥 **Скачать установщик нативного плагина:** [**Clipboard_Paste_Plugin_v1.17.zip**](https://github.com/SaidAuita/AI-Clipboard-Paste/releases/download/v1.17/Clipboard_Paste_Plugin_v1.17.zip) *(Страница релиза: [Релиз v1.17](https://github.com/SaidAuita/AI-Clipboard-Paste/releases/tag/v1.17))*
+> 📥 **Скачать установщик нативного плагина:** [**Clipboard_Paste_Plugin_v1.27.zip**](https://github.com/SaidAuita/AI-Clipboard-Paste/releases/download/v1.27/Clipboard_Paste_Plugin_v1.27.zip) *(Страница релиза: [Релиз v1.27](https://github.com/SaidAuita/AI-Clipboard-Paste/releases/tag/v1.27))*
 
 ### ⚡ Проблема: отвал буфера обмена в Illustrator при активной работе
 
@@ -401,16 +413,19 @@ Run `Uninstall.bat` to cleanly remove the extension from Adobe CEP without affec
 
 ---
 
-### 🌟 1. Нативный C++ плагин (.aip) — Приоритетная версия (v1.25)
+### 🌟 1. Нативный C++ плагин (.aip) — Приоритетная версия (v1.27)
 
 **Нативный C++ плагин** — это самый быстрый, чистый и многофункциональный инструмент прямого дублирования и трансформации объектов в Adobe Illustrator CC 2020 – 2026+:
 
 <p align="center">
-  <img src="images/Clipboard Paste Plugin_01.png" alt="Вкладка Clipboard: копирование, вставка и быстрое отражение" width="270">
+  <img src="images/Clipboard Paste Plugin_01.png" alt="Вкладка Clipboard: копирование, вставка и быстрое отражение" width="220">
   &nbsp;&nbsp;
-  <img src="images/Clipboard Paste Plugin_02.png" alt="Вкладка Offset Clone: создание узоров и пиксельной графики" width="270">
+  <img src="images/Clipboard Paste Plugin_02.png" alt="Вкладка Offset Clone с кнопкой Step 1/N" width="220">
   &nbsp;&nbsp;
-  <img src="images/Clipboard Paste Plugin_03.png" alt="Диалог настроек горячих клавиш (Preferences)" width="350">
+  <img src="images/Clipboard Paste Plugin_03.png" alt="Диалог настроек горячих клавиш (Preferences)" width="280">
+</p>
+<p align="center">
+  <img src="images/Clipboard Paste Plugin_04.png" alt="Демонстрация режима Step 1/6 на составном паттерне" width="800">
 </p>
 
 * **🔥 Горячие клавиши работают из коробки:**
@@ -422,6 +437,7 @@ Run `Uninstall.bat` to cleanly remove the extension from Adobe CEP without affec
   - `F10` — быстрое зеркальное отражение по горизонтали (*Reflect Horizontal*, $y = cy$).
   - `Ctrl + Numpad [1..9]` — клонирование со смещением ровно на размер объекта (*Pattern Offset Clone*).
   - `Alt + Numpad [1..9]` — сдвиг выделения без дублирования на размер объекта (*Pattern Offset Move*).
+  - `Ctrl + Alt + [1..9]` — мгновенная установка кратности шага от $1/1$ до $1/9$ (*Step Divisor*).
   Плагин перехватывает нажатия глобально на уровне процесса без необходимости кликать мышью по палитре или переключать фокус!
 
 * **🎯 Скоростное создание узоров, пиксель-арта и паттернов (Вкладка «Offset Clone»):**
@@ -430,6 +446,12 @@ Run `Uninstall.bat` to cleanly remove the extension from Adobe CEP without affec
   - **Рисование узоров «на лету»:** Удерживая клавишу или быстро нажимая комбинацию (например, `Ctrl+Num6`, `Ctrl+Num6`, `Ctrl+Num2`), вы выстраиваете непрерывные ряды плитки, геометрические орнаменты, кирпичные кладки или изометрические пиксельные иллюстрации за секунды — со скоростью пиксельной кисти, но в чистом редактируемом векторе!
   - **Режим перемещения (`Alt`):** Если требуется сдвинуть объект без создания дубликата, зажмите **`Alt + [1..9]`** — объект сделает дискретный шаг на свой размер, сохраняя выделение.
   - **Специально для ноутбуков:** Если у вас клавиатура без отдельного блока Numpad, в настройках (`Settings...`) можно в один клик переключиться на стандартный верхний ряд цифр `1..9`, раскладку букв `QWE / ASD / ZXC`, `UIO / JKL / M` или настроить любые удобные клавиши.
+
+* **📐 Дробный шаг смещения «Step Divisor» ($1/N$):**
+  - **Работа со сложными составными блоками:** Часто требуется размножить не одиночный объект, а сложную цепочку или группу (например, диагональный паттерн из 6 квадратов). Стандартный сдвиг сместил бы всю группу на её 100% габарит.
+  - **Быстрое задание кратности:** Нажатием **`Ctrl + Alt + [1..9]`** (или кликом по кнопке `[ Step: 1/N ]` на панели) вы задаете делитель шага $\Delta = \frac{\text{Размер}}{N}$. При шаге `1/6` весь блок из 6 элементов сдвигается или дублируется ровно на ширину одной ячейки!
+  - **Динамическая иконка палитры:** Иконка свернутой панели в доке Illustrator автоматически показывает зеленую цифру текущего шага ($1..9$).
+  - **Информационная строка:** Отображает точный вычисленный шаг: `Sel: W x H | Step 1/6: (W/6) x (H/6) pt`.
 
 * **🪞 Мгновенное отражение по хоткеям (Reflect Vertical / Horizontal):**
   - Клавиши `F9` (Reflect Vertical, зеркалирование лево/право) и `F10` (Reflect Horizontal, зеркалирование верх/низ) отражают выделенные объекты относительно их геометрического центра.
@@ -441,10 +463,10 @@ Run `Uninstall.bat` to cleanly remove the extension from Adobe CEP without affec
   - *Исправление:* Выделение теперь устанавливается строго по стандартам Adobe SDK на верхний уровень контейнеров, а контекст `CopyScope` изолирован, гарантируя полную стабильность на самых тяжёлых макетах.
 
 * **🎨 Нативное оформление и поддержка всех тем:** Палитра повторяет дизайн стандартных кнопок палитры *Свойства (Properties)* со скруглением 3px и автоматически перерисовывается под текущую тему Illustrator (тёмная, средне-тёмная, средне-светлая, светлая).
-* **⚙️ Графический диалог настроек (7 разделов):** Кнопка **Settings...** открывает окно переназначения любых клавиш (`F1`–`F12`, `Alt+...`, `Ctrl+...`), выбор пресета матрицы смещения, раздельный выбор модификаторов для Clone/Move, включение/отключение плагина и опцию автовыделения объектов (*Select object(s) after paste*).
+* **⚙️ Графический диалог настроек (7 разделов):** Кнопка **Settings...** открывает окно переназначения любых клавиш (`F1`–`F12`, `Alt+...`, `Ctrl+...`, `Ctrl+Alt+...`), выбор пресета матрицы смещения, раздельный выбор модификаторов для Clone/Move/Step, включение/отключение плагина и опцию автовыделения объектов (*Select object(s) after paste*).
 
 #### Быстрая установка нативного плагина:
-1. Скачайте архив установщика: [**Clipboard_Paste_Plugin_v1.25.zip**](https://github.com/SaidAuita/AI-Clipboard-Paste/releases/download/v1.25/Clipboard_Paste_Plugin_v1.25.zip) (или возьмите файлы из папки [`native-plugin/`](native-plugin/)).
+1. Скачайте архив установщика: [**Clipboard_Paste_Plugin_v1.27.zip**](https://github.com/SaidAuita/AI-Clipboard-Paste/releases/download/v1.27/Clipboard_Paste_Plugin_v1.27.zip) (или возьмите файлы из папки [`native-plugin/`](native-plugin/)).
 2. Распакуйте и запустите **`Install_Plugin.bat`** (инсталлятор автоматически обнаружит все установленные версии Illustrator 2020..2026+ и скопирует файл `ClipboardPaste.aip`).
 3. Запустите Adobe Illustrator — палитра ждёт вас в меню **Окно ➔ Clipboard Paste** (Window ➔ Clipboard Paste).
 
